@@ -124,11 +124,11 @@ Input files are expected to reside in the folder named `InputFolder` that appear
 ## PED to CSV Conversion:
 PLINK .ped files contain minimial header information so normalization is not necessary and the file can be processed directly. However, the major allele for each site needs to be determined before conversion can take place.
 ### A PLINK .ped file (with line headers removed):
-![pedfile](Ped.png)
+![pedfile](Docs/Ped.png)
 
 Work is divided amongst workers based on the line numbers. The worker is represented as an instance of the PedSumTask class. It sees only a slice of the input file. The frequencies of bases are summed (see image below) in each worker and will be merged with other workers' data when all work is complete.
 
-![pedsumtaskfile](PedSumTask.png)
+![pedsumtaskfile](Docs/PedSumTask.png)
 
 After the workers complete, their totals are combined into a `List<int[]>` data structure. 
 Where the position in the `List` represents the pair of columns of the base in the PLINK .ped file. 
@@ -169,11 +169,11 @@ The first entry of a line is the detected phenotype. `"-9"` is used to represent
 
 The input VCF file is normalized by removing the file header information lines, removing the line header information and extracting just the SNP genotype data entries from the records.
 ### A normalized .vcf file (with file and line headers removed and genotype data extracted):
-![vcffile](Vcf.png)
+![vcffile](Docs/Vcf.png)
 
 After data has been normalized the work is divided amongst workers. A worker is represented as an instance of the VcfToCsvTask class. Each worker sees and works on a slice of the normalized input file:
 
-![vcftocsvtaskfile](VcfToCsvTask.png)
+![vcftocsvtaskfile](Docs/VcfToCsvTask.png)
 
 Records in VCF files contain a list of SNPs where the first entry is the major allele and the following are a list of minor alleles. A simple index scheme is used to identify the position in the list. Therefore, the VCF input data can be easily translated to CSV through the following table:
 |Input|Meaning|
@@ -202,18 +202,18 @@ The two stage conversion will proceed as follows:
 * Stage 2 will consist of a comparison strategy similar to step 2 of the VCF conversion.
 
 ### A normalized .hmp file (with file and line headers removed):
-![hmpfile](Hmp.png)
+![hmpfile](Docs/Hmp.png)
 
 After data has been normalized the work is divided amongst workers. A stage 1 worker is represented as an instance of the HmpSumTask class. Each worker sees and works on a slice of the normalized input file:
 
-![hmpsumfile](HmpSumTask.png)
+![hmpsumfile](Docs/HmpSumTask.png)
 
 
 Once the summation results have been finalized the major allele is determined in a similar manner as the ped file. A reference to the `majorAllelesValues` array is passed to the stage 2 workers in the next step.
 
 The work is again divided and passed to stage 2 workers represented as an instance of the HmpToCsvTask class. Each worker sees and works on a slice of the normalized input file:
 
-![hmptocsvfile](HmpToCsvTask.png)
+![hmptocsvfile](Docs/HmpToCsvTask.png)
 
 The hapmap file format may use other entries other than ACTG to represent a variety of scenarios:
 |Input|Meaning|
