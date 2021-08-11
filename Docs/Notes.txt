@@ -1,0 +1,74 @@
+
+
+Need to add tri-allelic site support in ped->csv
+    Probably just iterate through majors DS, if site >5%?? then +1 to entry in csv...?
+
+Diploid examples: 0/1, 0|2
+Haploid examples: 0, 1
+Triploid examples: 0/1/1, 0/0/1
+
+
+switch (entry) {
+    case "0/0", "0|0": // 2 Majors.
+        entry = "0";
+        break;
+    case "0/1", "1/0", "0|1", "1|0": // "0/*", "0|*", "*/0", "*|0" // 1 Major and 1 minor = 0 and any non-zero number.
+        entry = "1";
+        break;
+    case "./.", ".|.", "*/*", "*|*": // Missing data.
+        entry = "4";
+        break;
+    default: // Two minor alleles, any two non-zero numbers.
+        entry = "2";
+        break;
+}
+
+
+
+
+ped:
+height - 281
+width - 6186 (3093*2)
+ped->csv = determine major for each site, convert side by side entries into 0/1/2/etc, line by line.
+3093 arrays of frequencies(int[5])
+
+vcf:
+height - 3093
+width - 281 (2 numbers though 0/1)
+vcf->csv = convert 0/1 pattern to 0 1 or 2.
+1 column in vcf = 1 line in csv
+
+hmp:
+height - 3093
+width - 562 (281*2)
+1 col of 2 chars in hmp = 1 row in ped.
+1 col of 2 chars in hmp = 1 line in csv.
+
+csv:
+height - 281
+width - 3093 (1 entry per pair)
+
+
+hmp:
+Code	Meaning
+A	Adenine
+C	Cytosine
+G	Guanine
+T	Thymine
+R	A or G
+Y	C or T
+S	G or C
+W	A or T
+K	G or T
+M	A or C
+B	C or G or T
+D	A or G or T
+H	A or C or T
+V	A or C or G
+N	any base
+. or -	gap
+
+
+Flow diagram of algorithm
+
+How conversion from ATCG to 0/1, 0/2 is determined
