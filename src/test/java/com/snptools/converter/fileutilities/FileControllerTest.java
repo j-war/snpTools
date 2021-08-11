@@ -31,26 +31,6 @@ public class FileControllerTest {
     // test.ped has 474 * 2 data entries = 948.
 
     /**
-     * Tests whether the input and output test files and folders are
-     * accessible to the testing program.
-     */
-    @Test
-    @DisplayName("testCanAccessDataFiles")
-    void testCanAccessDataFiles() {
-        // TRUE: Good, good
-        // FALSE: Good, bad
-        // FALSE: Bad, good
-        // FALSE: Bad, bad
-        Assertions.assertAll(
-            () -> assertTrue(FileController.canAccessDataFiles(TEST_INPUT_PED, TEST_OUTPUT_PED)),
-            () -> assertFalse(FileController.canAccessDataFiles(TEST_INPUT_PED, DOES_NOT_EXIST + TEST_OUTPUT_PED)),
-            () -> assertFalse(FileController.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, TEST_OUTPUT_PED)),
-            () -> assertFalse(FileController.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, DOES_NOT_EXIST + TEST_OUTPUT_PED))
-        );
-    
-    }
-
-    /**
      * Tests that the test input file exists and can be accessed.
      */
     @Test

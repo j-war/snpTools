@@ -79,26 +79,6 @@ public class FileController {
     }
 
     /**
-     * Use as an early check to determine the existence of the input file and
-     * output folder.
-     * 
-     * @return  Whether the set input file and output path are accessible.
-     */
-    public static boolean canAccessDataFiles(String inputFile, String outputFile) {
-        if (!FileController.canReadFile(inputFile)) {
-            System.out.println("Error: Cannot read input file, closing.");
-            return false;
-        } // else { System.out.println("Can read input file, continuing."); }
-
-        if (!FileController.directoryExists(outputFile)) {
-            System.out.println("Error: Cannot read from output folder, closing.");
-            return false;
-        } // else { System.out.println("Can read output folder"); }
-
-        return true;
-    }
-
-    /**
      * Counts and returns the total number of lines in the provided text file.
      * @param fileName  The path containing the file name without an extension.
      * @return  An integer representing the total number of lines in the text file.

@@ -190,7 +190,7 @@ public class PedController {
             for (int i = 0; i < inputColumnCount; ++i) {
                 int max = totals.get(i)[0]; // Initialize the first value as the current most frequent.
                 int index = 0;
-                for (int j = 0; j < NUMBER_OF_BASES - 1; ++j) { // = 4. Filter out unknown values.
+                for (int j = 0; j < NUMBER_OF_BASES - 1; ++j) { // = 4. Filter out unknown values by not checking index 4.
                     int value = totals.get(i)[j];
                     if (max < value) {
                         max = value;
@@ -243,9 +243,9 @@ public class PedController {
 
     /**
      * All access to totals must be synchronized. Including reading of data through .get().
-     * 
+     *
      * This is the main DS that holds the frequency summation results.
-     * 
+     *
      * @return  The synchronized totals datastructure.
      */
     public synchronized List<int[]> getTotals() {
@@ -254,7 +254,7 @@ public class PedController {
 
     /**
      * Merges the set of files into a single file at the provided path and name.
-     * 
+     *
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and an extension.
      * @param tempName  The intermediate file containing its appendix, file path, and an extension.
@@ -267,7 +267,7 @@ public class PedController {
 
     /**
      * Attempts to clean up a set of temporary files.
-     * 
+     *
      *  Note: May silently fail to delete temporary files if there are certain security settings on the system.
      *        Will delete and/or overwrite existing data with no warning or prompts.
      */
@@ -365,8 +365,8 @@ public class PedController {
     }
 
     /**
-     * Returns the input file path.
-     * 
+     * Returns the input file path with an extension.
+     *
      * @return  The input file name and path with an extension.
      */
     public String getInputFilePath() {
@@ -374,8 +374,8 @@ public class PedController {
     }
 
     /**
-     * Returns the output file path.
-     * 
+     * Returns the output file path with an extension.
+     *
      * @return  The output file name and path with an extension.
      */
     public String getOutputFilePath() {

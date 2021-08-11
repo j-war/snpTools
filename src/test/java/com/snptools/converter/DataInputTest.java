@@ -1,20 +1,25 @@
 package com.snptools.converter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-//import org.junit.jupiter.params.ParameterizedTest;
-//import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  * Unit test for DataInput.
  */
 public class DataInputTest {
+
+    final String TEST_INPUT_PED = "./src/test/resources/test.ped";
+    final String TEST_OUTPUT_PED = "./src/test/resources/testPed.csv";
+    final String DOES_NOT_EXIST = "DOES_NOT_EXIST";
+    final File FILE_DOES_NOT_EXIST = new File("not a path");
 
     /**
      * JUnit5 setup check.
@@ -25,7 +30,11 @@ public class DataInputTest {
         assertTrue(true);
     }
 
+    /**
+     * Simple setup check.
+     */
     @Test
+    @DisplayName("shouldCheckAllInputArguments")
     void shouldCheckAllInputArguments() {
         List<String> numbers = List.of("0", "./InputFolder", "./OutputFolder");
         Assertions.assertAll(
@@ -34,6 +43,27 @@ public class DataInputTest {
             () -> assertEquals("./OutputFolder", numbers.get(2)),
             () -> assertEquals(3, numbers.size())
         );
+    }
+
+    /**
+     * Tests whether the input and output test files and folders are accessible
+     * to the testing program and whether the main entry point correctly interprets
+     * valid and invalid file paths.
+     */
+    @Test
+    @DisplayName("testCanAccessDataFiles")
+    void testCanAccessDataFiles() {
+        // TRUE: Good, good
+        // FALSE: Good, bad
+        // FALSE: Bad, good
+        // FALSE: Bad, bad
+        Assertions.assertAll(
+            () -> assertTrue(DataInput.canAccessDataFiles(TEST_INPUT_PED, TEST_OUTPUT_PED)),
+            () -> assertFalse(DataInput.canAccessDataFiles(TEST_INPUT_PED, DOES_NOT_EXIST + TEST_OUTPUT_PED)),
+            () -> assertFalse(DataInput.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, TEST_OUTPUT_PED)),
+            () -> assertFalse(DataInput.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, DOES_NOT_EXIST + TEST_OUTPUT_PED))
+        );
+
     }
 
 }

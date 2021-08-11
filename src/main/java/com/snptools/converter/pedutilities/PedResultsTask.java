@@ -37,7 +37,7 @@ public class PedResultsTask implements Runnable {
     /**
      * Compares the input file to the calculated site's major allele and writes the
      * output to the provided file path.
-     * 
+     *
      * @param inputFilename The input file path and file name with a file extension for processing.
      * @param outputFilename    The  The input file path and file name with a file extension for processing.
      * @param startLine The line for this worker to start at.
@@ -62,80 +62,16 @@ public class PedResultsTask implements Runnable {
             FileOutputStream outputStream = new FileOutputStream(outputFilename);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            Scanner lineScanner = new Scanner("");
             for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to the starting position.
             for (int i = 0; i < endLine - startLine; ++i) {
-                String line = reader.readLine();
-                lineScanner = new Scanner(line);
-                for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { // Skip ahead and collect phenotypes.
-                    if (lineScanner.hasNext()) {
-                        if (j == PHENOTYPE_COLUMN) {
-                            phenotypes[i] = lineScanner.next();
-                            //phenotypes.add(i, lineScanner.next());
-                        } else {
-                            lineScanner.next();
-                        }
-                    } else {
-                        System.out.println("Malformed ped file: unexpected or missing data.");
-                        lineScanner.close();
-                        return;
-                    }
-                }
-
-                // Parse line into results:
-                for (int k = 0; k < columns; ++k) {
-                //while (lineScanner.hasNext()) {
-                    int result = 0;
-                    String value = "";
-                    if (lineScanner.hasNext()) {
-                        value = lineScanner.next();
-                        switch (value) {
-                            case "A", "C", "T", "G", "a", "c", "t", "g":
-                                if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
-                                    ++result;
-                                }
-                                break;
-                            default:
-                                result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
-                                break;
-                        }
-                    } else {
-                        System.out.println("Malformed ped file: unexpected number of alleles.");
-                        lineScanner.close();
-                        return;
-                    }
-
-                    if (lineScanner.hasNext()) {
-                        value = lineScanner.next();
-                        switch (value) {
-                            case "A", "C", "T", "G", "a", "c", "t", "g":
-                                if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
-                                    ++result;
-                                }
-                                break;
-                            default:
-                                result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
-                                break;
-                        }
-                    } else {
-                        System.out.println("Malformed ped file: odd number of alleles.");
-                        lineScanner.close();
-                        return;
-                    }
-
-                    //results.get(i)[k] = result;
-                    partialResults[k] = result;
-                }
+                accumulateResults(i, reader.readLine());
                 // Write the accumulated results
                 outputStreamWriter.write(phenotypes[i]);
                 for (int x = 0; x < columns; ++x) {
                     outputStreamWriter.write("," + partialResults[x]);
                 }
                 outputStreamWriter.write("\n");
-
-                lineScanner.close();
             }
-
         } catch (FileNotFoundException e) {
             System.out.println("The provided file could not be found or it could not be opened.");
             e.printStackTrace();
@@ -143,10 +79,75 @@ public class PedResultsTask implements Runnable {
             System.out.println("There was a problem accessing the input file or writing to the output.");
             e.printStackTrace();
         } catch (NoSuchElementException e) {
-            System.out.println("No data found. Possible malformed file.");
+            System.out.println("No data found in the PED file. Possible malformed file.");
             e.printStackTrace();
         }
 
     }
+
+    private void accumulateResults(int lineNumber, String line) {
+        Scanner lineScanner = new Scanner(line);
+        for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { // Skip ahead and collect phenotypes.
+            if (lineScanner.hasNext()) {
+                if (j == PHENOTYPE_COLUMN) {
+                    phenotypes[lineNumber] = lineScanner.next();
+                    //phenotypes.add(i, lineScanner.next());
+                } else {
+                    lineScanner.next();
+                }
+            } else {
+                System.out.println("Malformed ped file: unexpected or missing data.");
+                lineScanner.close();
+                return;
+            }
+        }
+
+        // Parse line into results:
+        for (int k = 0; k < columns; ++k) {
+        //while (lineScanner.hasNext()) {
+            int result = 0;
+            String value = "";
+            if (lineScanner.hasNext()) {
+                value = lineScanner.next();
+                switch (value) {
+                    case "A", "C", "T", "G", "a", "c", "t", "g":
+                        if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
+                            ++result;
+                        }
+                        break;
+                    default:
+                        result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                        break;
+                }
+            } else {
+                System.out.println("Malformed ped file: unexpected number of alleles.");
+                lineScanner.close();
+                return;
+            }
+
+            if (lineScanner.hasNext()) {
+                value = lineScanner.next();
+                switch (value) {
+                    case "A", "C", "T", "G", "a", "c", "t", "g":
+                        if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
+                            ++result;
+                        }
+                        break;
+                    default:
+                        result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                        break;
+                }
+            } else {
+                System.out.println("Malformed ped file: odd number of alleles.");
+                lineScanner.close();
+                return;
+            }
+
+            //results.get(i)[k] = result;
+            partialResults[k] = result;
+        }
+        lineScanner.close();
+    }
+
 
 }

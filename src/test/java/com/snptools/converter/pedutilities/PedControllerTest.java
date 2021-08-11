@@ -114,7 +114,8 @@ public class PedControllerTest {
     }
 
     /**
-     * Tests whether the majorAlleles datastructure was initialized correctly.
+     * Tests whether the majorAlleles datastructure was initialized correctly by
+     * summing the test input file and calling calculateMajors() through reflection.
      * 
      * This test uses reflection to selectively call private methods and to set
      * private fields for convenience. Some select allele pairs are checked that
@@ -123,8 +124,8 @@ public class PedControllerTest {
      * to the pre-filled dictionary.)
      */
     @Test
-    @DisplayName("testCalculateMajors")
-    public void testCalculateMajors() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException, SecurityException, InterruptedException {
+    @DisplayName("testSummingAndThenCalculateMajors")
+    public void testSummingAndThenCalculateMajors() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException, SecurityException, InterruptedException {
 
         PedController pedController = new PedController(TEST_INPUT_PED, TEST_OUTPUT_PED);
 

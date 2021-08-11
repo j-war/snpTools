@@ -10,7 +10,7 @@ import com.snptools.converter.fileutilities.FileController;
  * This program will attempt to convert the provided .ped, .vcf, or .hmp
  * file into a .csv file.
  * Conversion between .vcf and .hmp files is also possible.
- * 
+ *
  * Note: Conversion between .vcf and .hmp results in the loss of some information
  *       in the destination format. In particular, .vcf meta data is not included
  *       in the .hmp file format.
@@ -57,7 +57,7 @@ class DataInput {
             return; // Invalid input arguments, exit.
         }
 
-        if (!FileController.canAccessDataFiles(args[1], args[2])) {
+        if (!canAccessDataFiles(args[1], args[2])) {
             System.out.println("Error: Unable to find or access input or output locations.");
             return;
         }
@@ -98,6 +98,26 @@ class DataInput {
                 break;
             }
         }
+    }
+
+    /**
+     * Use as an early check to determine the existence of the input file and
+     * output folder.
+     * 
+     * @return  Whether the set input file and output path are accessible.
+     */
+    public static boolean canAccessDataFiles(String inputFile, String outputFile) {
+        if (!FileController.canReadFile(inputFile)) {
+            System.out.println("Error: Cannot read input file, closing.");
+            return false;
+        } // else { System.out.println("Can read input file, continuing."); }
+
+        if (!FileController.directoryExists(outputFile)) {
+            System.out.println("Error: Cannot read from output folder, closing.");
+            return false;
+        } // else { System.out.println("Can read output folder"); }
+
+        return true;
     }
 
 }
