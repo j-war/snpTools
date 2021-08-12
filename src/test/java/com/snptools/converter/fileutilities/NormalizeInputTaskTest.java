@@ -2,6 +2,9 @@ package com.snptools.converter.fileutilities;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +32,38 @@ public class NormalizeInputTaskTest {
     public void shouldConstructNormalizeInputTask() {
         NormalizeInputTask normalizeInputTask = new NormalizeInputTask(TEST_INPUT_PED, TEST_OUTPUT_PED, START_LINE, END_LINE, START_COLUMN, NUMBER_OF_COLUMNS, COLUMN_WIDTH);
         assertNotNull(normalizeInputTask);
+    }
+
+    /**
+     * Tests whether the NormalizeInputTask worker properly truncates
+     * and stores data in partialResults.
+     * @throws SecurityException
+     * @throws NoSuchMethodException
+     * @throws InvocationTargetException
+     * @throws IllegalArgumentException
+     * @throws IllegalAccessException
+     */
+    @Test
+    @DisplayName("shouldAccumulateResults")
+    public void shouldAccumulateResults() throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+
+        // Repeat for VCF and HMP:
+        // vcf: startColumn = number of headers to skip, numberOfColumns = number of columns to keep, columnWidth = 3
+        // hmp: startColumn = , numberOfColumns = , columnWidth = 
+        // Create a test string to pass to accumulate()
+        // create an expectedPartialResults array
+        //
+        // Create a Normalize worker
+        // call accumulate with test string
+        // ?copy its partialResults array?
+        // Compare the partial results to expected results in a loop.
+
+        NormalizeInputTask normalizeInputTask = new NormalizeInputTask(TEST_INPUT_PED, TEST_OUTPUT_PED, START_LINE, END_LINE, START_COLUMN, NUMBER_OF_COLUMNS, COLUMN_WIDTH);
+        Method accumulateResults = NormalizeInputTask.class.getDeclaredMethod("accumulateResults", String.class);
+        accumulateResults.setAccessible(true);
+        accumulateResults.invoke(normalizeInputTask, "my test string");
+
+
     }
 
 }
