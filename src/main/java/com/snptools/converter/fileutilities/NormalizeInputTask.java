@@ -86,11 +86,14 @@ public class NormalizeInputTask implements Runnable {
      * after the first 0 to columnWidth characters. The results are stored in
      * the partialResults line buffer.
      * 
-     * @param line The data line that will be parsed.
+     * @param line The data line that will be parsed and stripped.
      */
     private void accumulateResults(String line) {
         if (line == null || line.isBlank() || line.isEmpty()) {
             System.out.println("The provided entry contained no data.");
+            for (int k = 0; k < numberOfColumns; ++k) {
+                partialResults[k] = "";
+            }
             return;
         }
         Scanner lineScanner = new Scanner(line);

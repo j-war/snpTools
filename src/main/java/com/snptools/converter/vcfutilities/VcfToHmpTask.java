@@ -77,8 +77,7 @@ public class VcfToHmpTask implements Runnable {
                     randomAccessFile.seek(i * totalColumns * SIZE_OF_VCF_COLUMN + j * SIZE_OF_VCF_COLUMN); // Iterate through line.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) { // == 3.
-                        int value = randomAccessFile.read();
-                        entry += FileController.intToChar(value);
+                        entry += FileController.intToChar(randomAccessFile.read());
                     }
                     accumulateResults(i, j, entry);
                 }

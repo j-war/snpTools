@@ -65,52 +65,15 @@ public class HmpToCsvTask implements Runnable {
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
                     randomAccessFile.seek(j * totalColumns * SIZE_OF_COLUMN + i * SIZE_OF_COLUMN); // Move pointer into position.
+                    /* Convert intermediate value to allele:
+                        * The RandomAccessFile.read() function returns bytes:
+                        * convert bytes to char, then interpet the string.
+                    */
                     String entry = "";
-                    int result = 0;
                     for (int k = 0; k < SIZE_OF_COLUMN - 1; ++k) {
-
-                        int value = randomAccessFile.read();
-
-                        //func() {
-
-
-                        /* Convert intermediate value to allele:
-                         * The RandomAccessFile.read() function returns bytes:
-                         * convert bytes to char, then interpet the string.
-                        */
-                        entry = "" + FileController.intToChar(value);
-
-                        // Compare allele to majorAllelesValues array to determine output:
-                        switch (entry) {
-                            case "A", "C", "T", "G", "a", "c", "t", "g":
-                                if (!entry.equalsIgnoreCase(majorAllelesValues[j])) {
-                                    ++result;
-                                }
-                                break;
-                            default:
-                                if (result == MISSING_DATA) { // if the first allele was missing, set it to 5 by adding 1.
-                                    ++result;
-                                } else { // else, if just the second allele is missing(regardless of it being major/minor) set it to 4.
-                                    result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
-                                }
-                                //result = 4; // So, if output in file is 4 or 5 then it is unknown.
-                                break;
-                        }
-
-
-
-
-
-// end func() here.
-
-
-
+                        entry += FileController.intToChar(randomAccessFile.read());
                     }
-                        // Save result to linebuffer:
-                        partialResults[j] = result;
-
-
-
+                    accumulateResults(j, entry);
                 }
                 outputStreamWriter.write("-9,"); // Phenotype placeholder.
                 for (int j = 0; j < totalLines; ++j) {
@@ -132,20 +95,39 @@ public class HmpToCsvTask implements Runnable {
 
     }
 
-        /**
-     * Iterates through the TSV string parsing it into the phenotype and partialResults
-     * data structures that will be written to disk after.
+    /**
+     * Interprets the HMP entry into the line buffer at the specified line.
      * 
-     * @param lineNumber    The line number that is being parsed and indexed into
-     *                      phenotypes[] and partialResults[].
-     * @param line  The TSV string of the line that was read from the file to be parsed.
+     * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
+     * @param entry  Is a two character allele entry from an HMP file
      */
-    private void accumulateResults(int lineNumber, String line) {
-        if (line == null || line.isBlank() || line.isEmpty()) {
-            System.out.println("The provided line contained no data.");
+    private void accumulateResults(int lineNumber, String entry) {
+        if (entry == null || entry.isBlank() || entry.isEmpty()) {
+            System.out.println("The provided entry contained no data.");
+            partialResults[lineNumber] = MISSING_DATA + 1;
             return;
         }
-
+        int result = 0;
+        // Compare allele to majorAllelesValues array to determine output:
+        for (int k = 0; k < entry.length(); ++k) {
+            String allele = entry.substring(0 + k, 1 + k);
+            switch (allele) {
+                case "A", "C", "T", "G", "a", "c", "t", "g":
+                    if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
+                        ++result;
+                    }
+                    break;
+                default:
+                    if (result == MISSING_DATA) { // if the first allele was missing, set it to 5 by adding 1.
+                        ++result;
+                    } else { // else, if just the second allele is missing(regardless of it being major/minor) set it to 4.
+                        result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                    }
+                    break;
+            }
+        }
+        // Save result to linebuffer:
+        partialResults[lineNumber] = result;
     }
 
 }

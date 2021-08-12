@@ -27,6 +27,7 @@ public class HmpToVcfTask implements Runnable {
     //private static final int HAPLOID_WIDTH = 1;
     private static final int DIPLOID_WIDTH = 2;
     //private static final int TRIPLOID_WIDTH = 3;
+    private final int SIZE_OF_HMP_COLUMN = 3;
     private final String[] alleles; // A reference to the collected alleles array.
     private final String[] strandDirections; // A reference to the collected strands directions array.
     private final String[] lineHeaders; // A reference to the line headers array.
@@ -71,13 +72,10 @@ public class HmpToVcfTask implements Runnable {
             // ...
             // at end of file, write arrayBuffer to new line
             // go to start.
-
-            int sizeOfColumn = 3;
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
                     // randomAccessFile.seek(line + offset);
-                    randomAccessFile.seek(i * totalColumns * sizeOfColumn + j * sizeOfColumn); // Move to starting position.
-
+                    randomAccessFile.seek(i * totalColumns * SIZE_OF_HMP_COLUMN + j * SIZE_OF_HMP_COLUMN); // Move to starting position.
                     // Read an entry from the normalized file and then compare and optionally correct
                     // for the strand direction.
                     // The comparison is between the collected CSV string and the individual alleles
@@ -86,58 +84,10 @@ public class HmpToVcfTask implements Runnable {
                     //       its own record and possible SNPs.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) {
-                        int value = randomAccessFile.read();
-                        entry += FileController.intToChar(value);
+                        entry += FileController.intToChar(randomAccessFile.read());
                     }
-                    // Only Diploid cells are currently supported.
-                    if (entry.length() == DIPLOID_WIDTH) { // == 2.
-                        try {
-                            String entryOne = "";
-                            String entryTwo = "";
-                            // Check the strand direction:
-                            if (strandDirections[i].equalsIgnoreCase("+")) { // if strand == +
-                                entryOne = "" + entry.substring(1, 2);
-                                entryTwo = "" + entry.substring(0, 1);
-                            } else { // else strand == -
-                                entryOne = "" + entry.substring(0, 1);
-                                entryTwo = "" + entry.substring(1, 2);
-                            }
-                            String entryOneResult = ".";
-                            String entryTwoResult = ".";
-                            String result = "";
-
-                            String[] values = alleles[i].split(",");
-
-                            // Compare entryOne and entryTwo to values[] to determine index, append index to result.
-                            // Append result to the lineBuffer.
-
-                            for (int k = 0; k < values.length; ++k) {
-                                //System.out.println("entry: [" + entry + "]");
-                                if (entryOne.compareToIgnoreCase(values[k]) == 0) {
-                                    entryOneResult = "" + k;
-                                }
-                                if (entryTwo.compareToIgnoreCase(values[k]) == 0) {
-                                    entryTwoResult = "" + k;
-                                }
-                            }
-                            if (entryOne.compareToIgnoreCase(".") == 0 || entryTwo.compareToIgnoreCase(".") == 0) {
-                                result = "./.";
-                            } else {
-                                result = entryOneResult + "/" + entryTwoResult;
-                            }
-
-                            partialResults[j] = result;
-
-                        } catch (IndexOutOfBoundsException e) {
-                            System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
-                            // Likely a malformed file or programming logical error:
-                            partialResults[j] = "./."; // Two '.' characters for diploids, three for triploid, etc.
-                        }
-                    }
-
-
+                    accumulateResults(i, j, entry);
                 }
-
                 // Print file+line header:
                 outputStreamWriter.write("" + lineHeaders[i]);
                 for (int j = 0; j < totalColumns; ++j) {
@@ -153,21 +103,64 @@ public class HmpToVcfTask implements Runnable {
             System.out.println("There was an error accessing files in a HmpToVcfTask worker.");
             e.printStackTrace();
         }
-
     }
 
     /**
-     * Iterates through the TSV string parsing it into the phenotype and partialResults
-     * data structures that will be written to disk after.
+     * Interprets the provided HMP entry and stores its result in the partialResults
+     * datastructure.
      * 
-     * @param lineNumber    The line number that is being parsed and indexed into
-     *                      phenotypes[] and partialResults[].
-     * @param line  The TSV string of the line that was read from the file to be parsed.
+     * @param lineNumber    The line number that is being parsed.
+     * @param columnNumber    The column number that is being parsed.
+     * @param entry  The two character HMP string that was read from the file to be parsed.
      */
-    private void accumulateResults(int lineNumber, String line) {
-        if (line == null || line.isBlank() || line.isEmpty()) {
-            System.out.println("The provided line contained no data.");
+    private void accumulateResults(int lineNumber, int columnNumber, String entry) {
+        if (entry == null || entry.isBlank() || entry.isEmpty()) {
+            System.out.println("The provided entry contained no data.");
+            partialResults[columnNumber] = "./.";
             return;
+        }
+
+        if (entry.length() == DIPLOID_WIDTH) { // == 2.
+            try {
+                String entryOne = "";
+                String entryTwo = "";
+                // Check the strand direction:
+                if (strandDirections[lineNumber].equalsIgnoreCase("+")) { // if strand == +
+                    entryOne = "" + entry.substring(1, 2);
+                    entryTwo = "" + entry.substring(0, 1);
+                } else { // else strand == -
+                    entryOne = "" + entry.substring(0, 1);
+                    entryTwo = "" + entry.substring(1, 2);
+                }
+                String entryOneResult = ".";
+                String entryTwoResult = ".";
+                String result = "";
+
+                String[] values = alleles[lineNumber].split(",");
+
+                // Compare entryOne and entryTwo to values[] to determine index, append index to result.
+                // Append result to the lineBuffer.
+
+                for (int k = 0; k < values.length; ++k) {
+                    //System.out.println("entry: [" + entry + "]");
+                    if (entryOne.compareToIgnoreCase(values[k]) == 0) {
+                        entryOneResult = "" + k;
+                    }
+                    if (entryTwo.compareToIgnoreCase(values[k]) == 0) {
+                        entryTwoResult = "" + k;
+                    }
+                }
+                if (entryOne.compareToIgnoreCase(".") == 0 || entryTwo.compareToIgnoreCase(".") == 0) {
+                    result = "./.";
+                } else {
+                    result = entryOneResult + "/" + entryTwoResult;
+                }
+                partialResults[columnNumber] = result;
+            } catch (IndexOutOfBoundsException e) {
+                System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
+                // Likely a malformed file or programming logical error:
+                partialResults[columnNumber] = "./."; // Two '.' characters for diploids, three for triploid, etc.
+            }
         }
 
     }

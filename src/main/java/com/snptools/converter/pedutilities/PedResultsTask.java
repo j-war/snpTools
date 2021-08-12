@@ -95,6 +95,9 @@ public class PedResultsTask implements Runnable {
     private void accumulateResults(int lineNumber, String line) {
         if (line == null || line.isBlank() || line.isEmpty()) {
             System.out.println("The provided line contained no data.");
+            for (int k = 0; k < columns; ++k) {
+                partialResults[k] = MISSING_DATA + 1;
+            }
             return;
         }
         Scanner lineScanner = new Scanner(line);
