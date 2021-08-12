@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
+import com.snptools.converter.fileutilities.FileController;
+
 /**
  * The HmpToVcfTask class is used to calculate and write the results of the hmp to 
  * vcf conversion to the provided output file path.
@@ -13,7 +15,7 @@ import java.io.RandomAccessFile;
  * and the threads were successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.1, July 2021
+ * @version 1.2, August 2021
  */
 public class HmpToVcfTask implements Runnable {
 
@@ -28,6 +30,7 @@ public class HmpToVcfTask implements Runnable {
     private final String[] alleles; // A reference to the collected alleles array.
     private final String[] strandDirections; // A reference to the collected strands directions array.
     private final String[] lineHeaders; // A reference to the line headers array.
+    private String[] partialResults; // A line buffer containing accumulated results.
 
     /**
      * This worker completes the conversion from HMP to VCF by utilizing the collected and normalized data.
@@ -51,6 +54,7 @@ public class HmpToVcfTask implements Runnable {
         this.alleles = alleles;
         this.strandDirections = strandDirections;
         this.lineHeaders = outputLineHeaders;
+        this.partialResults = new String[totalColumns];
     }
 
     public void run() {
@@ -67,7 +71,7 @@ public class HmpToVcfTask implements Runnable {
             // ...
             // at end of file, write arrayBuffer to new line
             // go to start.
-            String[] lineBuffer = new String[totalColumns];
+
             int sizeOfColumn = 3;
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
@@ -83,87 +87,7 @@ public class HmpToVcfTask implements Runnable {
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) {
                         int value = randomAccessFile.read();
-
-                        switch (value) {
-                            case 43: // '+'
-                                entry += "+";
-                                break;
-                            case 44: // ','
-                                entry += ",";
-                                break;
-                            case 45: // '-'
-                                entry += "-";
-                                break;
-                            case 46: // '.'
-                                entry += ".";
-                                break;
-                            case 47: // '/'
-                                entry += "/";
-                                break;
-                            case 48: // '0'
-                                entry += "0";
-                                break;
-                            case 49: // '1'
-                                entry += "1";
-                                break;
-                            case 50: // '2'
-                                entry += "2";
-                                break;
-                            case 51: // '3'
-                                entry += "3";
-                                break;
-                            case 52: // '4'
-                                entry += "4";
-                                break;
-                            case 53: // '5'
-                                entry += "5";
-                                break;
-                            case 54: // '6'
-                                entry += "6";
-                                break;
-                            case 55: // '7'
-                                entry += "7";
-                                break;
-                            case 56: // '8'
-                                entry += "8";
-                                break;
-                            case 57: // '9'
-                                entry += "9";
-                                break;
-                            case 58: // ':'
-                                entry += ":";
-                                break;
-                            case 59: // ';'
-                                entry += ";";
-                                break;
-
-
-                            case 65, 97: // 'A', 'a'
-                                entry += "A";
-                                break;
-                            case 67, 99: // 'C', 'c'
-                                entry += "C";
-                                break;
-                            case 71, 103: // 'G', 'g'
-                                entry += "G";
-                                break;
-                            case 84, 116: // 'T', 't'
-                                entry += "T";
-                                break;
-                            case 78, 110: // 'N', 'n'
-                                entry += "N";
-                                break;
-
-
-                            case 124: // '|'
-                                entry += "|";
-                                break;
-
-                            default: // Error or Unknown.
-                                entry += "X";
-                                break;
-                        }
-
+                        entry += FileController.intToChar(value);
                     }
                     // Only Diploid cells are currently supported.
                     if (entry.length() == DIPLOID_WIDTH) { // == 2.
@@ -202,12 +126,12 @@ public class HmpToVcfTask implements Runnable {
                                 result = entryOneResult + "/" + entryTwoResult;
                             }
 
-                            lineBuffer[j] = result;
+                            partialResults[j] = result;
 
                         } catch (IndexOutOfBoundsException e) {
                             System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
                             // Likely a malformed file or programming logical error:
-                            lineBuffer[j] = "./."; // Two '.' characters for diploids, three for triploid, etc.
+                            partialResults[j] = "./."; // Two '.' characters for diploids, three for triploid, etc.
                         }
                     }
 
@@ -218,9 +142,9 @@ public class HmpToVcfTask implements Runnable {
                 outputStreamWriter.write("" + lineHeaders[i]);
                 for (int j = 0; j < totalColumns; ++j) {
                     if (j < totalColumns - 1) {
-                        outputStreamWriter.write(lineBuffer[j] + "\t");
+                        outputStreamWriter.write(partialResults[j] + "\t");
                     } else {
-                        outputStreamWriter.write("" + lineBuffer[j]);
+                        outputStreamWriter.write("" + partialResults[j]);
                     }
                 }
                 outputStreamWriter.write("\n");
@@ -228,6 +152,22 @@ public class HmpToVcfTask implements Runnable {
         } catch (IOException e) {
             System.out.println("There was an error accessing files in a HmpToVcfTask worker.");
             e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Iterates through the TSV string parsing it into the phenotype and partialResults
+     * data structures that will be written to disk after.
+     * 
+     * @param lineNumber    The line number that is being parsed and indexed into
+     *                      phenotypes[] and partialResults[].
+     * @param line  The TSV string of the line that was read from the file to be parsed.
+     */
+    private void accumulateResults(int lineNumber, String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided line contained no data.");
+            return;
         }
 
     }

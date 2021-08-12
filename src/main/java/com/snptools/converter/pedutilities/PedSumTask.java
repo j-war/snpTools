@@ -59,70 +59,9 @@ public class PedSumTask implements Runnable {
     public void run() {
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilename))) {
             initTotals();
-            Scanner lineScanner = new Scanner("");
             for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting position.
             for (int i = 0; i < endLine - startLine; ++i) {
-                String line = reader.readLine();
-                lineScanner = new Scanner(line);
-                for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { lineScanner.next(); } // Skip line header.
-
-                synchronized (totals) {
-                    for (int k = 0; k < columns; ++k) {
-                        String value = "";
-                        if (lineScanner.hasNext()) {
-                            value = lineScanner.next();
-                            // Switch on the value to count frequency:
-                            switch (value) {
-                                case "A", "a":
-                                    ++(totals.get(k)[0]);
-                                    break;
-                                case "C", "c":
-                                    ++(totals.get(k)[1]);
-                                    break;
-                                case "T", "t":
-                                    ++(totals.get(k)[2]);
-                                    break;
-                                case "G", "g":
-                                    ++(totals.get(k)[3]);
-                                    break;
-                                default: // Unknowns.
-                                    ++(totals.get(k)[4]);
-                                    //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                    break;
-                            }
-                        } else {
-                            System.out.println("Malformed ped file: unexpected number of alleles.");
-                            lineScanner.close();
-                            return;
-                        }
-                        if (lineScanner.hasNext()) {
-                            value = lineScanner.next();
-                            switch (value) {
-                                case "A", "a":
-                                    ++(totals.get(k))[0];
-                                    break;
-                                case "C", "c":
-                                    ++(totals.get(k))[1];
-                                    break;
-                                case "T", "t":
-                                    ++(totals.get(k))[2];
-                                    break;
-                                case "G", "g":
-                                    ++(totals.get(k))[3];
-                                    break;
-                                default: // Unknowns.
-                                    ++(totals.get(k)[4]);
-                                    //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                    break;
-                            }
-                        } else {
-                            System.out.println("Malformed ped file, odd number of alleles.");
-                            lineScanner.close();
-                            return;
-                        }
-                    }
-                }
-                lineScanner.close();
+                accumulateTotals(reader.readLine());
             }
         } catch (FileNotFoundException e) {
             System.out.println("The input file could not be found.");
@@ -138,6 +77,78 @@ public class PedSumTask implements Runnable {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * Counts and accumulates SNP frequencies from the provided line into the
+     * synchronized totals data structure.
+     * 
+     * @param line  The TSV line read from the file that will be tallied.
+     */
+    private void accumulateTotals(String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided line contained no data.");
+            return;
+        }
+        Scanner lineScanner = new Scanner(line);
+        for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { lineScanner.next(); } // Skip line header.
+        synchronized (totals) {
+            for (int k = 0; k < columns; ++k) {
+                String value = "";
+                if (lineScanner.hasNext()) {
+                    value = lineScanner.next();
+                    // Switch on the value to count frequency:
+                    switch (value) {
+                        case "A", "a":
+                            ++(totals.get(k)[0]);
+                            break;
+                        case "C", "c":
+                            ++(totals.get(k)[1]);
+                            break;
+                        case "T", "t":
+                            ++(totals.get(k)[2]);
+                            break;
+                        case "G", "g":
+                            ++(totals.get(k)[3]);
+                            break;
+                        default: // Unknowns.
+                            ++(totals.get(k)[4]);
+                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                            break;
+                    }
+                } else {
+                    System.out.println("Malformed ped file: unexpected number of alleles.");
+                    lineScanner.close();
+                    return;
+                }
+                if (lineScanner.hasNext()) {
+                    value = lineScanner.next();
+                    switch (value) {
+                        case "A", "a":
+                            ++(totals.get(k))[0];
+                            break;
+                        case "C", "c":
+                            ++(totals.get(k))[1];
+                            break;
+                        case "T", "t":
+                            ++(totals.get(k))[2];
+                            break;
+                        case "G", "g":
+                            ++(totals.get(k))[3];
+                            break;
+                        default: // Unknowns.
+                            ++(totals.get(k)[4]);
+                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                            break;
+                    }
+                } else {
+                    System.out.println("Malformed ped file, odd number of alleles.");
+                    lineScanner.close();
+                    return;
+                }
+            }
+        }
+        lineScanner.close();
     }
 
     /**

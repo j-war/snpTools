@@ -53,39 +53,19 @@ public class NormalizeInputTask implements Runnable {
             FileOutputStream outputStream = new FileOutputStream(outputFilenameWithExt);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            Scanner lineScanner = new Scanner("");
             for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting point.
             for (int i = 0; i < endLine - startLine; ++i) {
-                String line = reader.readLine();
-                lineScanner = new Scanner(line);
-                for (int j = 0; j < startColumn; ++j) { lineScanner.next(); } // Skip the line header.
-
-                // Parse line into partialResults:
-                for (int k = 0; k < numberOfColumns; ++k) {
-                    String value = "";
-                    if (lineScanner.hasNext()) {
-                        value = lineScanner.next();
-                    } else {
-                        System.out.println("Malformed input file, number of inputs does not match expected amount.");
-                        lineScanner.close();
-                        return;
-                    }
-                    partialResults[k] = value.substring(0, columnWidth); // Only need the GT (genotype) information, drop the rest.
-                }
-
+                accumulateResults(reader.readLine());
                 // Write the accumulated results:
                 for (int x = 0; x < numberOfColumns; ++x) {
                     if (x < numberOfColumns - 1) {
                         outputStreamWriter.write(partialResults[x] + ",");
                     } else {
-                        outputStreamWriter.write(partialResults[x]);
+                        outputStreamWriter.write("" + partialResults[x]);
                     }
                 }
                 outputStreamWriter.write("\n");
-
-                lineScanner.close();
             }
-
         } catch (FileNotFoundException e) {
             System.out.println("A normalization worker could not find the provided file.");
             e.printStackTrace();
@@ -100,5 +80,35 @@ public class NormalizeInputTask implements Runnable {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Parses the provided line and strips the trailing characters that occur
+     * after the first 0 to columnWidth characters. The results are stored in
+     * the partialResults line buffer.
+     * 
+     * @param line The data line that will be parsed.
+     */
+    private void accumulateResults(String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided entry contained no data.");
+            return;
+        }
+        Scanner lineScanner = new Scanner(line);
+        for (int j = 0; j < startColumn; ++j) { lineScanner.next(); } // Skip the line header.
+        // Parse line into partialResults:
+        for (int k = 0; k < numberOfColumns; ++k) {
+            String value = "";
+            if (lineScanner.hasNext()) {
+                value = lineScanner.next();
+            } else {
+                System.out.println("Malformed input file, number of inputs does not match expected amount.");
+                lineScanner.close();
+                return;
+            }
+            partialResults[k] = value.substring(0, columnWidth); // Only need the GT (genotype) information, drop the rest.
+        }
+        lineScanner.close();
+    }
+
 
 }

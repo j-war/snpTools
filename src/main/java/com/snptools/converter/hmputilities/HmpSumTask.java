@@ -1,6 +1,7 @@
 package com.snptools.converter.hmputilities;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ import java.util.Scanner;
  * completed and the thread was successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.0, June 2021
+ * @version 1.1, August 2021
  */
 public class HmpSumTask implements Runnable {
 
@@ -38,7 +39,7 @@ public class HmpSumTask implements Runnable {
         this.startLine = startLine;
         this.endLine = endLine;
         this.totalColumns = totalColumns;
-        initTotals();
+        //initTotals(); // Called in run()/start().
     }
 
     /**
@@ -54,92 +55,106 @@ public class HmpSumTask implements Runnable {
     }
 
     public void run() {
+        // 1. Open file and initTotals.
+        // 2. Skip to appropriate startLine
+        // 3. for the number of lines assigned loop:
+        //
+        // 4. scan in line and pass to function
+        // 5. (for the number of columns on line)
+        //
+        // 6. get its value
+        // 7. check its value and increment appropriate entry  
+        // 8.     -> go to next column assigned
+        // 9.  -> go to 3.
+
         // 1.
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilename))) {
-            //
-            // 1. Open file
-            // 2. Skip to appropriate startLine
-            // 3. for the number of lines assigned loop:
-            //
-            // 4. scan in line
-            // 5. (for the number of columns on line)
-            //
-            // 6. get its value
-            // 7. check its value and increment appropriate entry  
-            // 8.     -> go to next column assigned
-            // 9.  -> go to 3.
-
+            initTotals();
             // 2.
             for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting line.
             // 3.
             for (int i = 0; i < endLine - startLine; ++i) {
                 // 4.
-                String line = reader.readLine();
-                Scanner lineScanner = new Scanner(line);
-                lineScanner.useDelimiter(",");
-
-                // 5.
-                for (int j = 0; j < totalColumns; ++j) {
-                    //System.out.println("Line: " + line);
-                    synchronized (totals) {
-                        //for (int k = 0; k < columns; ++k) {
-                        if (lineScanner.hasNext()) {
-                            // 6.
-                            String value = lineScanner.next();
-                            //System.out.println("Value: [" + value + "] ");
-                            // Switch on the value to count frequency:
-                            // 7.
-                            switch (value.substring(0, 1)) {
-                                case "A":
-                                    ++(totals.get(i)[0]);
-                                    break;
-                                case "C":
-                                    ++(totals.get(i)[1]);
-                                    break;
-                                case "T":
-                                    ++(totals.get(i)[2]);
-                                    break;
-                                case "G":
-                                    ++(totals.get(i)[3]);
-                                    break;
-                                default: // Unknowns.
-                                    ++(totals.get(i)[4]);
-                                    //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                    break;
-                            }
-                            switch (value.substring(1, 2)) {
-                                case "A":
-                                    ++(totals.get(i)[0]);
-                                    break;
-                                case "C":
-                                    ++(totals.get(i)[1]);
-                                    break;
-                                case "T":
-                                    ++(totals.get(i)[2]);
-                                    break;
-                                case "G":
-                                    ++(totals.get(i)[3]);
-                                    break;
-                                default: // Unknowns.
-                                    ++(totals.get(i)[4]);
-                                    //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                    break;
-                            }
-                        } else {
-                            System.out.println("Malformed hmp file - there is an unexpected number of entries.");
-                            lineScanner.close();
-                            return;
-                        }
-
-                    }
-
-                }
-                lineScanner.close();
+                accumulateTotals(i, reader.readLine());
             }
+        } catch (FileNotFoundException e) {
+            System.out.println("There was an error finding a file in a HmpSumTask worker.");
+            e.printStackTrace();
         } catch (IOException e) {
             System.out.println("There was a problem accessing the intermediate file.");
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Counts and accumulates SNP frequencies from the provided line into the
+     * synchronized totals data structure.
+     * 
+     * @param lineNumber  The line's number that is being parsed.
+     * @param line  The TSV line read from the file that will be tallied.
+     */
+    private void accumulateTotals(int lineNumber, String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided line contained no data.");
+            return;
+        }
+        Scanner lineScanner = new Scanner(line);
+        lineScanner.useDelimiter(",");
+        // 5.
+        for (int j = 0; j < totalColumns; ++j) {
+            //System.out.println("Line: " + line);
+            synchronized (totals) {
+                //for (int k = 0; k < columns; ++k) {
+                if (lineScanner.hasNext()) {
+                    // 6.
+                    String value = lineScanner.next();
+                    //System.out.println("Value: [" + value + "] ");
+                    // Switch on the value to count frequency:
+                    // 7.
+                    switch (value.substring(0, 1)) {
+                        case "A":
+                            ++(totals.get(lineNumber)[0]);
+                            break;
+                        case "C":
+                            ++(totals.get(lineNumber)[1]);
+                            break;
+                        case "T":
+                            ++(totals.get(lineNumber)[2]);
+                            break;
+                        case "G":
+                            ++(totals.get(lineNumber)[3]);
+                            break;
+                        default: // Unknowns.
+                            ++(totals.get(lineNumber)[4]);
+                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                            break;
+                    }
+                    switch (value.substring(1, 2)) {
+                        case "A":
+                            ++(totals.get(lineNumber)[0]);
+                            break;
+                        case "C":
+                            ++(totals.get(lineNumber)[1]);
+                            break;
+                        case "T":
+                            ++(totals.get(lineNumber)[2]);
+                            break;
+                        case "G":
+                            ++(totals.get(lineNumber)[3]);
+                            break;
+                        default: // Unknowns.
+                            ++(totals.get(lineNumber)[4]);
+                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                            break;
+                    }
+                } else {
+                    System.out.println("Malformed hmp file - there is an unexpected number of entries.");
+                    lineScanner.close();
+                    return;
+                }
+            }
+        }
+        lineScanner.close();
     }
 
     /**

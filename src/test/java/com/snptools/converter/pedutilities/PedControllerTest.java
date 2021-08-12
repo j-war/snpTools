@@ -126,23 +126,24 @@ public class PedControllerTest {
     @Test
     @DisplayName("testSummingAndThenCalculateMajors")
     public void testSummingAndThenCalculateMajors() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchFieldException, NoSuchMethodException, SecurityException, InterruptedException {
-
-        PedController pedController = new PedController(TEST_INPUT_PED, TEST_OUTPUT_PED);
-
         // 1. set workers to = 1
         // 2. set totalInputLines = 3
         // 3. set inputColumnCount = 474
-
+        
         // 4. should call processInputThreaded but instead just call run/start on pedSumTask
-
+        
         // 5. initTotals()
-        // 6. mergeThreadTotals() 
-        //      -> set the controllers field = tasks field.
+        // 6. Several options:
+        //      -> mergeThreadTotals() 
+        //      -> set the controllers field = tasks field. <-
+        //      -> processInputThreaded(1)
         // 7. >>>> calculateMajors()
         // 8. >>>> calculateResultsThreaded
-        //      -> Cherry pick a few points since the DS is complex.
+        //      -> Cherry pick a few points.
+
 
         // 1.
+        PedController pedController = new PedController(TEST_INPUT_PED, TEST_OUTPUT_PED);
         Field NUMBER_OF_WORKERS = pedController.getClass().getDeclaredField("NUMBER_OF_WORKERS");
         NUMBER_OF_WORKERS.setAccessible(true);
         NUMBER_OF_WORKERS.set(pedController, 1); // set to 1 for single thread.
@@ -203,7 +204,6 @@ public class PedControllerTest {
             () -> assertEquals("A", pedController.majorAllelesValues[246]),
             () -> assertEquals("T", pedController.majorAllelesValues[COLUMN_PAIRS - 1])
         );
-        
     }
 
 }

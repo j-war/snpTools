@@ -13,6 +13,7 @@ public class NormalizeInputTaskTest {
     // test.ped has 474 * 2 data entries = 948.
     final String TEST_INPUT_PED = "./src/test/resources/test.ped";
     final String TEST_OUTPUT_PED = "./src/test/resources/testPed.csv";
+
     final int START_LINE = 0;
     final int END_LINE = 3;
 

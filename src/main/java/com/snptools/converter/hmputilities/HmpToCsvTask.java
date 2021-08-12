@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
+import com.snptools.converter.fileutilities.FileController;
+
 /**
  * The HmpToCsvTask class is used to calculate and write the results of the hmp to 
  * csv conversion to the provided output file path.
@@ -14,11 +16,12 @@ import java.io.RandomAccessFile;
  * and the threads were successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.1, July 2021
+ * @version 1.2, August 2021
  */
 public class HmpToCsvTask implements Runnable {
 
     private final int SIZE_OF_COLUMN = 3; // Including the comma: Example: "AA," is the column including the comma seperator.
+    private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
     private final int startColumn;
@@ -28,6 +31,8 @@ public class HmpToCsvTask implements Runnable {
 
     //private String[] phenotypes;
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
+
+    private int[] partialResults; // A line buffer containing accumulated results.
 
     /**
      * Compares the input file to the calculated site's major and writes its output to the provided path.
@@ -48,6 +53,7 @@ public class HmpToCsvTask implements Runnable {
         this.totalColumns = totalColumns;
         this.totalLines = totalLines;
         this.majorAllelesValues = majorAllelesValues;
+        this.partialResults = new int[totalLines];
     }
 
     public void run() {
@@ -56,97 +62,23 @@ public class HmpToCsvTask implements Runnable {
             FileOutputStream outputStream = new FileOutputStream(outputFilename);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            String[] lineBuffer = new String[totalLines];
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
                     randomAccessFile.seek(j * totalColumns * SIZE_OF_COLUMN + i * SIZE_OF_COLUMN); // Move pointer into position.
                     String entry = "";
                     int result = 0;
                     for (int k = 0; k < SIZE_OF_COLUMN - 1; ++k) {
+
                         int value = randomAccessFile.read();
+
+                        //func() {
+
+
                         /* Convert intermediate value to allele:
                          * The RandomAccessFile.read() function returns bytes:
                          * convert bytes to char, then interpet the string.
                         */
-                        switch (value) {
-                            case 43: // '+'
-                                entry = "+";
-                                break;
-                            case 44: // ','
-                                entry = ",";
-                                break;
-                            case 45: // '-'
-                                entry = "-";
-                                break;
-                            case 46: // '.'
-                                entry = ".";
-                                break;
-                            case 47: // '/'
-                                entry = "/";
-                                break;
-                            case 48: // '0'
-                                entry = "0";
-                                break;
-                            case 49: // '1'
-                                entry = "1";
-                                break;
-                            case 50: // '2'
-                                entry = "2";
-                                break;
-                            case 51: // '3'
-                                entry = "3";
-                                break;
-                            case 52: // '4'
-                                entry = "4";
-                                break;
-                            case 53: // '5'
-                                entry = "5";
-                                break;
-                            case 54: // '6'
-                                entry = "6";
-                                break;
-                            case 55: // '7'
-                                entry = "7";
-                                break;
-                            case 56: // '8'
-                                entry = "8";
-                                break;
-                            case 57: // '9'
-                                entry = "9";
-                                break;
-                            case 58: // ':'
-                                entry = ":";
-                                break;
-                            case 59: // ';'
-                                entry = ";";
-                                break;
-
-
-                            case 65, 97: // 'A', 'a'
-                                entry = "A";
-                                break;
-                            case 67, 99: // 'C', 'c'
-                                entry = "C";
-                                break;
-                            case 71, 103: // 'G', 'g'
-                                entry = "G";
-                                break;
-                            case 84, 116: // 'T', 't'
-                                entry = "T";
-                                break;
-                            case 78, 110: // 'N', 'n'
-                                entry = "N";
-                                break;
-
-
-                            case 124: // '|'
-                                entry = "|";
-                                break;
-
-                            default: // Error or Unknown.
-                                entry = "X";
-                                break;
-                        }
+                        entry = "" + FileController.intToChar(value);
 
                         // Compare allele to majorAllelesValues array to determine output:
                         switch (entry) {
@@ -156,20 +88,36 @@ public class HmpToCsvTask implements Runnable {
                                 }
                                 break;
                             default:
-                                result = 4; // So, if output in file is 4 or 5 then it is unknown.
+                                if (result == MISSING_DATA) { // if the first allele was missing, set it to 5 by adding 1.
+                                    ++result;
+                                } else { // else, if just the second allele is missing(regardless of it being major/minor) set it to 4.
+                                    result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                                }
+                                //result = 4; // So, if output in file is 4 or 5 then it is unknown.
                                 break;
                         }
 
-                        // Save result to linebuffer:
-                        lineBuffer[j] = "" + result;
+
+
+
+
+// end func() here.
+
+
+
                     }
+                        // Save result to linebuffer:
+                        partialResults[j] = result;
+
+
+
                 }
                 outputStreamWriter.write("-9,"); // Phenotype placeholder.
                 for (int j = 0; j < totalLines; ++j) {
                     if (j < totalLines - 1) {
-                        outputStreamWriter.write(lineBuffer[j] + ",");
+                        outputStreamWriter.write(partialResults[j] + ",");
                     } else {
-                        outputStreamWriter.write("" + lineBuffer[j]);
+                        outputStreamWriter.write("" + partialResults[j]);
                     }
                 }
                 outputStreamWriter.write("\n");
@@ -180,6 +128,22 @@ public class HmpToCsvTask implements Runnable {
         } catch (IOException e) {
             System.out.println("There was an error accessing files in a HmpToCsvTask worker.");
             e.printStackTrace();
+        }
+
+    }
+
+        /**
+     * Iterates through the TSV string parsing it into the phenotype and partialResults
+     * data structures that will be written to disk after.
+     * 
+     * @param lineNumber    The line number that is being parsed and indexed into
+     *                      phenotypes[] and partialResults[].
+     * @param line  The TSV string of the line that was read from the file to be parsed.
+     */
+    private void accumulateResults(int lineNumber, String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided line contained no data.");
+            return;
         }
 
     }

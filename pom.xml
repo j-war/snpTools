@@ -9,7 +9,7 @@
   <version>1.0</version>
 
   <name>Converter</name>
-  <url>https://github.com/j-war/snptools</url>
+  <url>https://github.com/j-war/snpTools</url>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

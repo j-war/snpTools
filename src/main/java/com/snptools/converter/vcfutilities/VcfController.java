@@ -408,7 +408,7 @@ outputLineHeaders[1] onwards =
                 + result + '\t' // alleles
                 + getLineHeaders().get(i)[0] + '\t' // chrom
                 + getLineHeaders().get(i)[1] + '\t' // pos
-                + ".\t.\tNA\tNA\tNA\tNA\tNA\t"); // strand,assembly#,center,protLSID,assayLSID,panel,QCcode.
+                + ".\t.\tNA\tNA\tNA\tNA\tNA\t"); // strand,assembly#,center,protLSID,assayLSID,panel,QCcode,[data].
         }
     }
 
@@ -532,7 +532,6 @@ outputLineHeaders[1] onwards =
             }
         }
     }
-
 
     /**
      * Process the intermediate data that has been normalized.

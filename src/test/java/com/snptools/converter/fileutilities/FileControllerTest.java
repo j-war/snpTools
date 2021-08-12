@@ -21,6 +21,7 @@ public class FileControllerTest {
 
     final String TEST_INPUT_PED = "./src/test/resources/test.ped";
     final String TEST_OUTPUT_PED = "./src/test/resources/testPed.csv";
+
     final String DOES_NOT_EXIST = "DOES_NOT_EXIST";
     final File FILE_DOES_NOT_EXIST = new File("not a path");
     final int FILE_COUNT = 4; // The number of sequential files that should be written.
@@ -77,7 +78,6 @@ public class FileControllerTest {
 
             () -> assertFalse(FileController.directoryExists(DOES_NOT_EXIST + TEST_INPUT_PED)),
             () -> assertFalse(FileController.directoryExists(DOES_NOT_EXIST + TEST_OUTPUT_PED))
-
         );
     }
 
@@ -154,7 +154,6 @@ public class FileControllerTest {
                 }
             }
         );
-
     }
 
     /**

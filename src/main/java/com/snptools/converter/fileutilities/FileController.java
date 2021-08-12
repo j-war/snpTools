@@ -20,8 +20,7 @@ public class FileController {
     /**
      * Use to determine if a file exists and is readable at this point in time.
      * 
-     * @param fileName   The file path with file name and without an extension.
-     * @param fileExtension The file's extension.
+     * @param fileName   The file path with file name and with an extension.
      * @return  Whether the file exists and is readable.
      * 
      * Note: There is no guarantee that the file will still exist or be readable 
@@ -49,9 +48,9 @@ public class FileController {
     }
 
     /**
-     * Use to determine if the directory of the file path without an extension exists.
+     * Use to determine if the directory of the file path with an extension exists.
      * 
-     * @param fileName   The file path with file name and without an extension.
+     * @param fileName   The file path with file name and with an extension.
      * @return  Whether the file's directory exists.
      * 
      * Note: There is no guarantee that the file path will still exist after this method returns.
@@ -80,7 +79,7 @@ public class FileController {
 
     /**
      * Counts and returns the total number of lines in the provided text file.
-     * @param fileName  The path containing the file name without an extension.
+     * @param fileName  The path containing the file name with an extension.
      * @return  An integer representing the total number of lines in the text file.
      * 
      * Returns 0 on an exception regardless of if any lines were previously counted.
@@ -109,7 +108,7 @@ public class FileController {
      * Merges a set of files, in ordinal number order, and names it as provided.
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The path containing the name of the resultant file.
-     * @param inputName The path containing the file name, without an extension.
+     * @param inputName The path containing the file name, with an extension.
      * 
      * Note: Will overwrite files, permissions allowing, without warning.
      */
@@ -140,7 +139,7 @@ public class FileController {
     /**
      * Attempts to delete temporary files associated with a requested conversion.
      * @param count The number of files in the set.
-     * @param fileName The path containing the file name, without an extension and without an appendix.
+     * @param fileName The path containing the file name, with an extension and without an appendix.
      * @param appendix  The appendix added to the file's name based on processing stage.
      * 
      *  Note: May silently fail to delete temporary files if there are certain security settings on the system.
@@ -164,8 +163,7 @@ public class FileController {
 
     /**
      * Attempts to delete a single file at the provided path.
-     * @param fileName  The path containing the file name, without an extension, to be deleted.
-     * @param extension The input file's extension.
+     * @param fileName  The path containing the file name, with an extension, to be deleted.
      * 
      *  Note: May silently fail to delete temporary files if there are certain security settings on the system.
      *        Will delete and/or overwrite existing data with no warning or prompts.
@@ -189,6 +187,97 @@ public class FileController {
             stream = Stream.concat(stream, Arrays.stream(s));
         }
         return stream.toArray(String[]::new);
+    }
+
+    /**
+     * Convenience method for filtering and converting read bytes to a specific
+     * set of characters.
+     * 
+     * @param value   The integer that was read through a random access file to be converted.
+     * @return  The interpreted character.
+     */
+    public static char intToChar(int value) {
+        char entry = 'X';
+        switch (value) {
+            case 43:
+                entry = '+';
+                break;
+            case 44:
+                entry = ',';
+                break;
+            case 45:
+                entry = '-';
+                break;
+            case 46:
+                entry = '.';
+                break;
+            case 47:
+                entry = '/';
+                break;
+            case 48:
+                entry = '0';
+                break;
+            case 49:
+                entry = '1';
+                break;
+            case 50:
+                entry = '2';
+                break;
+            case 51:
+                entry = '3';
+                break;
+            case 52:
+                entry = '4';
+                break;
+            case 53:
+                entry = '5';
+                break;
+            case 54:
+                entry = '6';
+                break;
+            case 55:
+                entry = '7';
+                break;
+            case 56:
+                entry = '8';
+                break;
+            case 57:
+                entry = '9';
+                break;
+            case 58:
+                entry = ':';
+                break;
+            case 59:
+                entry = ';';
+                break;
+
+            // Hmp->Csv
+            case 65, 97: // 'A', 'a'
+                entry = 'A';
+                break;
+            case 67, 99: // 'C', 'c'
+                entry = 'C';
+                break;
+            case 71, 103: // 'G', 'g'
+                entry = 'G';
+                break;
+            case 78, 110: // 'N', 'n'
+                entry = 'N';
+                break;
+            case 84, 116: // 'T', 't'
+                entry = 'T';
+                break;
+
+            case 124:
+                entry = '|';
+                break;
+
+            default: // Error or Unknown.
+                entry = 'X';
+                break;
+        }
+
+        return entry;
     }
     // Writes the results and phenotype datastructures to the previously
     // named output file. May throw FileNotFoundException if the file

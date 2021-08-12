@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
+import com.snptools.converter.fileutilities.FileController;
+
 /**
  * The VcfToCsvTask class is used to calculate and write the results of the vcf to 
  * csv conversion to the provided output file path.
@@ -14,7 +16,7 @@ import java.io.RandomAccessFile;
  * and the threads were successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.0, June 2021
+ * @version 1.1, August 2021
  */
 public class VcfToCsvTask implements Runnable {
 
@@ -27,6 +29,8 @@ public class VcfToCsvTask implements Runnable {
     //private static final int HAPLOID_WIDTH = 1;
     private static final int DIPLOID_WIDTH = 3; // The number of characters wide including the inner separator.
     //private static final int TRIPLOID_WIDTH = 5;
+    private final int NO_DATA_DIPLOID_IN_CSV = 5; // CSV format uses 5 for two missing data points in diploids.
+    private int[] partialResults;
 
     /**
      * This worker completes the conversion from VCF to CSV by utilizing the collected and normalized data.
@@ -46,6 +50,7 @@ public class VcfToCsvTask implements Runnable {
         this.endColumn = endColumn;
         this.totalColumns = totalColumns;
         this.totalLines = totalLines;
+        this.partialResults = new int[totalLines];
     }
 
     public void run() {
@@ -62,129 +67,23 @@ public class VcfToCsvTask implements Runnable {
             // ...
             // at end of file, write arrayBuffer to new line
             // go to start.
-            String[] lineBuffer = new String[totalLines];
             int sizeOfColumn = 4;
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
-                    //randomAccessFile.seek(j * i + j * totalColumns * sizeOfColumn);
-                    //randomAccessFile.seek(i * sizeOfColumn + j * (totalColumns * sizeOfColumn + 1));
-                    //System.out.println(randomAccessFile.length()); // 3476532 total, one line = 1124 -> one column = 4.
-
-                    //randomAccessFile.seek(j * totalColumns * sizeOfColumn);// Correct.
                     randomAccessFile.seek(j * totalColumns * sizeOfColumn + i * sizeOfColumn); // Iterate through column.
-
-                    //System.out.println("totalLines" + totalLines); // 3093.
-                    //System.out.println("totalColumns" + totalColumns); // 281.
-                    //System.out.println("sizeOfColumn" + sizeOfColumn); // 4.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) {
                         int value = randomAccessFile.read();
-
-                        switch (value) {
-                            case 43: // '+'
-                                entry += "+";
-                                break;
-                            case 44: // ','
-                                entry += ",";
-                                break;
-                            case 45: // '-'
-                                entry += "-";
-                                break;
-                            case 46: // '.'
-                                entry += ".";
-                                break;
-                            case 47: // '/'
-                                entry += "/";
-                                break;
-                            case 48: // '0'
-                                entry += "0";
-                                break;
-                            case 49: // '1'
-                                entry += "1";
-                                break;
-                            case 50: // '2'
-                                entry += "2";
-                                break;
-                            case 51: // '3'
-                                entry += "3";
-                                break;
-                            case 52: // '4'
-                                entry += "4";
-                                break;
-                            case 53: // '5'
-                                entry += "5";
-                                break;
-                            case 54: // '6'
-                                entry += "6";
-                                break;
-                            case 55: // '7'
-                                entry += "7";
-                                break;
-                            case 56: // '8'
-                                entry += "8";
-                                break;
-                            case 57: // '9'
-                                entry += "9";
-                                break;
-                            case 58: // ':'
-                                entry += ":";
-                                break;
-                            case 59: // ';'
-                                entry += ";";
-                                break;
-
-
-                            case 124: // '|'
-                                entry += "|";
-                                break;
-
-                            default: // Error or Unknown.
-                                entry += "X";
-                                break;
-                        }
-
+                        entry += FileController.intToChar(value);
                     }
-                    // Check if error ./.
-                    // Check if 2 zeros.
-                    // Check if 1 zero
-                    //   else, two minor alleles.
-                    /*
-                    SNP coding: for diploid,
-                        If we have two major alleles, it is 0.
-                        One major and one minor, it is 1.
-                        Two minor alleles, it is 2.
-                    */
-                    switch (entry) {
-                        case "0/0", "0|0": // 2 Majors.
-                            entry = "0";
-                            break;
-                        case "./.", ".|.", "*/*", "*|*": // Missing data.
-                            entry = "4";
-                            break;
-
-
-                        default: // Currently only valid for diploids and assumes data entries are well-formed:
-                            int result = 0;
-                            if (!(entry.substring(0, 1).equals("0"))) {
-                                ++result;
-                            }
-                            if (!(entry.substring(2, 3).equals("0"))) {
-                                //System.out.println(entry.substring(2, 3));
-                                ++result;
-                            }
-                            entry = "" + result;
-                            break;
-                    }
-
-                    lineBuffer[j] = entry;
-                    //System.out.println("Entry:[" + j + "] " + entry);
+                    accumulateResults(j, entry);
                 }
                 outputStreamWriter.write("-9,"); // Phenotype placeholder.
                 for (int j = 0; j < totalLines; ++j) {
                     if (j < totalLines - 1) {
-                        outputStreamWriter.write(lineBuffer[j] + ",");
+                        outputStreamWriter.write(partialResults[j] + ",");
                     } else {
-                        outputStreamWriter.write("" + lineBuffer[j]);
+                        outputStreamWriter.write("" + partialResults[j]);
                     }
                 }
                 outputStreamWriter.write("\n");
@@ -197,6 +96,61 @@ public class VcfToCsvTask implements Runnable {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+    * Interprets the provided string that was read from the normalized data file
+    * and stores the results in the line buffer, partialResults.
+    * 
+    * @param lineNumber    The line number that is being parsed.
+    * @param entry The data entry to be converted from VCF to HMP
+    *
+    * Note: Does not cover the case of a single missing value in diploid cells
+    *       Example: "./#" or "#/." etc.
+    *       
+    *       If the entry is a bad length then the output will be 5/missing data.
+    */
+   private void accumulateResults(int lineNumber, String entry) {
+       if (entry == null || entry.isBlank() || entry.isEmpty()) {
+           System.out.println("The provided entry contained no data.");
+           partialResults[lineNumber] = NO_DATA_DIPLOID_IN_CSV;
+           return;
+       }
+        // Check if error ./.
+        // Check if 2 zeros.
+        // Check if 1 zero
+        //   else, two minor alleles.
+        /*
+        SNP coding: for diploid,
+            If we have two major alleles, it is 0.
+            One major and one minor, it is 1.
+            Two minor alleles, it is 2.
+        */
+        int result = NO_DATA_DIPLOID_IN_CSV;
+        switch (entry) {
+            case "0/0", "0|0": // 2 Majors.
+                result = 0;
+                break;
+            case "./.", ".|.", "*/*", "*|*": // Missing data.
+                result = NO_DATA_DIPLOID_IN_CSV;
+                break;
+
+            default: // Currently only valid for diploids and assumes data entries are well-formed:
+                int value = 0;
+                if (entry.length() != DIPLOID_WIDTH) { // Simple integrity check.
+                    value = NO_DATA_DIPLOID_IN_CSV;
+                } else {
+                    if (!(entry.substring(0, 1).equals("0"))) { // Check first allele.
+                        ++value;
+                    }
+                    if (!(entry.substring(2, 3).equals("0"))) { // Check second allele.
+                        ++value;
+                    }
+                }
+                result = value;
+                break;
+        }
+        partialResults[lineNumber] = result;
     }
 
 }

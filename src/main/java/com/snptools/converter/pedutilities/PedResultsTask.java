@@ -65,7 +65,7 @@ public class PedResultsTask implements Runnable {
             for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to the starting position.
             for (int i = 0; i < endLine - startLine; ++i) {
                 accumulateResults(i, reader.readLine());
-                // Write the accumulated results
+                // Write the accumulated results:
                 outputStreamWriter.write(phenotypes[i]);
                 for (int x = 0; x < columns; ++x) {
                     outputStreamWriter.write("," + partialResults[x]);
@@ -82,10 +82,21 @@ public class PedResultsTask implements Runnable {
             System.out.println("No data found in the PED file. Possible malformed file.");
             e.printStackTrace();
         }
-
     }
 
+    /**
+     * Iterates through the TSV string parsing it into the phenotype and partialResults
+     * data structures that will be written to disk after.
+     * 
+     * @param lineNumber    The line number that is being parsed and indexed into
+     *                      phenotypes[] and partialResults[].
+     * @param line  The TSV string of the line that was read from the file to be parsed.
+     */
     private void accumulateResults(int lineNumber, String line) {
+        if (line == null || line.isBlank() || line.isEmpty()) {
+            System.out.println("The provided line contained no data.");
+            return;
+        }
         Scanner lineScanner = new Scanner(line);
         for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { // Skip ahead and collect phenotypes.
             if (lineScanner.hasNext()) {
@@ -134,7 +145,11 @@ public class PedResultsTask implements Runnable {
                         }
                         break;
                     default:
-                        result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                        if (result == MISSING_DATA) { // if the first allele was missing, set it to 5 by adding 1.
+                            ++result;
+                        } else { // else, if just the second allele is missing(regardless of it being major/minor) set it to 4.
+                            result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                        }
                         break;
                 }
             } else {
@@ -142,12 +157,9 @@ public class PedResultsTask implements Runnable {
                 lineScanner.close();
                 return;
             }
-
-            //results.get(i)[k] = result;
             partialResults[k] = result;
         }
         lineScanner.close();
     }
-
 
 }

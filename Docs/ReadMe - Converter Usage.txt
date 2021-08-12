@@ -39,7 +39,7 @@ javac -d Converter DataInput.java
 
 
 Running:
-java -cp [Classpath directory] Main [mode] [Relative input filepath without extension] [Relative output filepath without extension]
+java -cp [Classpath directory] Main [mode] [Relative input filepath with an extension] [Relative output filepath with an extension]
 
 Valid modes:
 0 for ped->csv

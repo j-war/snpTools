@@ -34,11 +34,10 @@ public class PedResultsTaskTest {
         assertNotNull(pedResultsTask);
     }
 
-
     /**
      * Tests whether a read line from the input file is correctly
      * parsed and interpreted.
-     * 
+     *
      * Note: This test uses reflection to selectively call private methods and to
      *       read private fields.
      */

@@ -46,7 +46,8 @@ class DataInput {
 
     /**
      * Process and direct computation based on provided arguments.
-     * @param args  The first entry in the array should be an integer to indicate the desired conversion mode.
+     * @param args  The array of string arguments where the first entry in the array
+     *              should be an integer to indicate the desired conversion mode.
      */
     private static void processArguments(String[] args) {
         int mode = -1;
@@ -59,7 +60,7 @@ class DataInput {
 
         if (!canAccessDataFiles(args[1], args[2])) {
             System.out.println("Error: Unable to find or access input or output locations.");
-            return;
+            return; // Unable to access a file/Missing file, exit.
         }
 
         switch (mode) {

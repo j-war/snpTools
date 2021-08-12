@@ -162,7 +162,6 @@ public class PedController {
     private void mergeThreadTotals() {
         synchronized(totals) {
             for (PedSumTask task : sumPool) {
-                System.out.println("task size:" + task.getTotals().size());
                 for (int i = 0; i < task.getTotals().size(); ++i) {
                     for (int j = 0; j < NUMBER_OF_BASES; ++j) { // = 5.
                         totals.get(i)[j] += task.getTotals().get(i)[j];

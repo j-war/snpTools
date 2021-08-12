@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 
+import com.snptools.converter.fileutilities.FileController;
+
 /**
  * The VcfToHmpTask class is used to calculate and write the results of the vcf to 
  * csv conversion to the provided output file path.
@@ -25,7 +27,9 @@ public class VcfToHmpTask implements Runnable {
     private static final String NO_DATA_DIPLOID = "NN"; // HMP representation of missing/unknown data for diploid cells. Two 'N' characters for diploids, three for triploid, etc.
     //private static final int HAPLOID_WIDTH = 1;
     private static final int DIPLOID_WIDTH = 3;
+    private static final int SIZE_OF_VCF_COLUMN = 4;
     //private static final int TRIPLOID_WIDTH = 5;
+    private String[] partialResults; // A line buffer containing accumulated results.
     private final String[] alleles; // A reference to the collected alleles array.
     private final String[] lineHeaders; // A reference to the line headers array.
 
@@ -50,6 +54,7 @@ public class VcfToHmpTask implements Runnable {
         this.totalColumns = totalColumns;
         this.alleles = alleles;
         this.lineHeaders = outputLineHeaders;
+        this.partialResults = new String[totalColumns];
     }
 
     public void run() {
@@ -66,150 +71,24 @@ public class VcfToHmpTask implements Runnable {
             // ...
             // at end of file, write arrayBuffer to new line
             // go to start.
-            String[] lineBuffer = new String[totalColumns];
-            int sizeOfColumn = 4;
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
-                    lineBuffer[j] = "";
                     //randomAccessFile.seek(line + offset);
-                    randomAccessFile.seek(i * totalColumns * sizeOfColumn + j * sizeOfColumn);
-                    // Iterate through line.
-
-                    //System.out.println("totalLines" + totalLines); // 3093.
-                    //System.out.println("totalColumns" + totalColumns); // 281.
-                    //System.out.println("sizeOfColumn" + sizeOfColumn); // 4.
-
+                    randomAccessFile.seek(i * totalColumns * SIZE_OF_VCF_COLUMN + j * SIZE_OF_VCF_COLUMN); // Iterate through line.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) { // == 3.
                         int value = randomAccessFile.read();
-
-                        switch (value) {
-                            case 43: // '+'
-                                entry += "+";
-                                break;
-                            case 44: // ','
-                                entry += ",";
-                                break;
-                            case 45: // '-'
-                                entry += "-";
-                                break;
-                            case 46: // '.'
-                                entry += ".";
-                                break;
-                            case 47: // '/'
-                                entry += "/";
-                                break;
-                            case 48: // '0'
-                                entry += "0";
-                                break;
-                            case 49: // '1'
-                                entry += "1";
-                                break;
-                            case 50: // '2'
-                                entry += "2";
-                                break;
-                            case 51: // '3'
-                                entry += "3";
-                                break;
-                            case 52: // '4'
-                                entry += "4";
-                                break;
-                            case 53: // '5'
-                                entry += "5";
-                                break;
-                            case 54: // '6'
-                                entry += "6";
-                                break;
-                            case 55: // '7'
-                                entry += "7";
-                                break;
-                            case 56: // '8'
-                                entry += "8";
-                                break;
-                            case 57: // '9'
-                                entry += "9";
-                                break;
-                            case 58: // ':'
-                                entry += ":";
-                                break;
-                            case 59: // ';'
-                                entry += ";";
-                                break;
-
-
-                            case 124: // '|'
-                                entry += "|";
-                                break;
-
-                            default: // Error or Unknown.
-                                entry += "X";
-                                break;
-                        }
-
+                        entry += FileController.intToChar(value);
                     }
-                    // Only Diploid cells are currently supported.
-                    if (entry.length() == DIPLOID_WIDTH) { // == 3.
-                        try {
-                            if (entry.compareTo("./.") == 0) {
-                                //System.out.println("./. found");
-                                lineBuffer[j] = NO_DATA_DIPLOID;
-                            } else {
-                                // Take the first and last characters, skipping the separator:
-                                int positionOne = Integer.parseInt(entry, 0, 1, 10);
-                                int positionTwo = Integer.parseInt(entry, 2, 3, 10);
-
-                                //String options = "";
-
-                                String[] values = alleles[i].split(",");
-                                String entryOne = "" + values[positionOne];
-                                String entryTwo = "" + values[positionTwo];
-                                String result = ""; // The output result that will be saved
-
-                                /* Adjust to be alphabetical for HMP format:
-                                    Options: [A, C, G, T, N]
-                                        A/C, A/G, A/T
-                                        C/G, C/T
-                                        G/T
-                                    Notes:
-                                    The VCF file may have only a major SNP resulting in the ref/alt being '.'.
-                                    If the ref/alt is not available in the VCF record, the result in the 
-                                    HMP file will be an 'N'.
-                                */
-
-                                if (entryOne.compareToIgnoreCase(entryTwo) < 0) {
-                                    // entryOne is smaller, or equal.
-                                    result = "" + entryOne + entryTwo;
-                                } else if (entryOne.compareToIgnoreCase(entryTwo) > 0)  {
-                                    // entryOne is greater
-                                    result = "" + entryTwo + entryOne;
-                                } else {
-                                    // Equal.
-                                    result = "" + entryOne + entryTwo;
-                                }
-                                lineBuffer[j] = result;
-                        /* if alphabetical/strand correction is not desired, use this:
-                        //result = "" + options.substring(positionOne, positionOne + 1) + options.substring(positionTwo, positionTwo + 1);
-                        //result = "" + alleles[i][positionOne] + alleles[i][positionTwo]
-                        */
-                            }
-                        } catch (NumberFormatException e) {
-                            // Thrown when the "no data" entry is encountered: "./."
-                            System.out.println("Skipping input. Unexpected data encountered - input data should be an integer.");
-                            lineBuffer[j] = NO_DATA_DIPLOID;
-                        } catch (IndexOutOfBoundsException e) {
-                            System.out.println("Skipping input. Possible malformed VCF file - input data appears inconsistent.");
-                            // Likely a malformed file or programming logical error:
-                            lineBuffer[j] = NO_DATA_DIPLOID;
-                        }
-                    }
+                    accumulateResults(i, j, entry);
                 }
-                // Print file+line header:
+                // Print file+line headers:
                 outputStreamWriter.write("" + lineHeaders[i]);
                 for (int j = 0; j < totalColumns; ++j) {
                     if (j < totalColumns - 1) {
-                        outputStreamWriter.write(lineBuffer[j] + "\t");
+                        outputStreamWriter.write(partialResults[j] + "\t");
                     } else {
-                        outputStreamWriter.write("" + lineBuffer[j]);
+                        outputStreamWriter.write("" + partialResults[j]);
                     }
                 }
                 outputStreamWriter.write("\n");
@@ -217,6 +96,81 @@ public class VcfToHmpTask implements Runnable {
         } catch (IOException e) {
             System.out.println("There was an error accessing files in a VcfToHmpTask worker.");
             e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Note: ONLY supports diploid cells.
+     * 
+     * Interprets the provided string that was read from the normalized data file
+     * and stores the results in the line buffer, partialResults.
+     * 
+     * @param lineNumber    The line number that is being parsed.
+     * @param columnNumber  The column that is being interpreted.
+     * @param entry The data entry to be converted from VCF to HMP.
+     */
+    private void accumulateResults(int lineNumber, int columnNumber, String entry) {
+        if (entry == null || entry.isBlank() || entry.isEmpty()) {
+            System.out.println("The provided entry contained no data.");
+            partialResults[columnNumber] = NO_DATA_DIPLOID;
+            return;
+        }
+        try {
+            partialResults[columnNumber] = "";
+            // Only Diploid cells are currently supported.
+            if (entry.length() != DIPLOID_WIDTH) { // == 3.
+                partialResults[columnNumber] = NO_DATA_DIPLOID;
+                return;
+            }
+            if ((entry.compareTo("./.") == 0) || (entry.compareTo(".|.") == 0)) {
+                //System.out.println("./. found");
+                partialResults[columnNumber] = NO_DATA_DIPLOID;
+            } else {
+                // Take the first and last characters, skipping the separator:
+                int positionOne = Integer.parseInt(entry, 0, 1, 10);
+                int positionTwo = Integer.parseInt(entry, 2, 3, 10);
+
+                String[] values = alleles[lineNumber].split(",");
+                String entryOne = "" + values[positionOne];
+                String entryTwo = "" + values[positionTwo];
+                String result = ""; // The output result that will be saved
+
+                /* Adjust to be alphabetical for HMP format:
+                    Options: [A, C, G, T, N]
+                        A/C, A/G, A/T
+                        C/G, C/T
+                        G/T
+                    Notes:
+                    The VCF file may have only a major SNP resulting in the ref/alt being '.'.
+                    If the ref/alt is not available in the VCF record, the result in the 
+                    HMP file will be an 'N'.
+                */
+
+                if (entryOne.compareToIgnoreCase(entryTwo) < 0) {
+                    // entryOne is smaller, or equal.
+                    result = "" + entryOne + entryTwo;
+                } else if (entryOne.compareToIgnoreCase(entryTwo) > 0)  {
+                    // entryOne is greater
+                    result = "" + entryTwo + entryOne;
+                } else {
+                    // Equal.
+                    result = "" + entryOne + entryTwo;
+                }
+                partialResults[columnNumber] = result;
+        /* if alphabetical/strand correction is not desired, use this:
+        //result = "" + options.substring(positionOne, positionOne + 1) + options.substring(positionTwo, positionTwo + 1);
+        //result = "" + alleles[i][positionOne] + alleles[i][positionTwo]
+        */
+            }
+        } catch (NumberFormatException e) {
+            // Thrown when the "no data" entry is encountered: "./."
+            System.out.println("Skipping input. Unexpected data encountered - input data should be an integer.");
+            partialResults[columnNumber] = NO_DATA_DIPLOID;
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Skipping input. Possible malformed VCF file - input data appears inconsistent.");
+            // Likely a malformed file or programming logical error:
+            partialResults[columnNumber] = NO_DATA_DIPLOID;
         }
 
     }

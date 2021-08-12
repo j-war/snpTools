@@ -18,7 +18,7 @@ The general flow of conversion works as follows:
 * cleanup temporary files
 ***
 # Compilation and running:
-File names as input arguments should not have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
+File names as input arguments should be relative and have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
 
 ## Compiling:
 ```
@@ -33,7 +33,7 @@ javac -d Converter DataInput.java
 
 ## Running:
 ```
-java -cp [Classpath directory] Main [mode] [Relative input filepath without extension] [Relative output filepath without extension]
+java -cp [Classpath directory] Main [mode] [Relative input filepath with an extension] [Relative output filepath with an extension]
 ```
 Supported modes are shown below:
 |Mode value|Result|
@@ -159,7 +159,7 @@ The first entry of a line is the detected phenotype. `"-9"` is used to represent
 |4|At least one SNP has invalid data|
 |5|Both SNPs contain invalid data|
 
-
+<b>Note:</b> If a single allele of a pair from the ped file is missing then the output will be 4, regardless of its pair being a major or minor. If both are missing then the output will be a 5.
 
 
 
@@ -183,8 +183,8 @@ Records in VCF files contain a list of SNPs where the first entry is the major a
 |A pair of any non-zero integers|Both SNPs are minors|
 |./.|Missing data|
 
-Note: the seperator can be '/' or '\|' for phased or unphased data.
-
+<b>Note:</b> The seperator can be '/' or '\|' for phased or unphased data.
+The output rules are similar to the PED to CSV conversion with the exception that only diploid cells are supported and any missing data recieves an output of 5 versus 4 or 5 in the former.
 
 
 
