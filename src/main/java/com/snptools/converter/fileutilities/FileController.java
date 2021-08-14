@@ -82,7 +82,7 @@ public class FileController {
      * @param fileName  The path containing the file name with an extension.
      * @return  An integer representing the total number of lines in the text file.
      * 
-     * Returns 0 on an exception regardless of if any lines were previously counted.
+     * Returns -1 on an exception regardless of if any lines were previously counted.
      */
     public static int countTotalLines(String fileName) {
         int totalInputLines = 0;
@@ -94,12 +94,12 @@ public class FileController {
             totalInputLines = lines; // Save the total.
         } catch (FileNotFoundException e) {
             System.out.println("The input file could not be found.");
-            e.printStackTrace();
-            return 0;
+            //e.printStackTrace();
+            return -1;
         } catch (IOException e) {
             System.out.println("There was an IO error checking the input file.");
-            e.printStackTrace();
-            return 0;
+            //e.printStackTrace();
+            return -1;
         }
         return totalInputLines;
     }

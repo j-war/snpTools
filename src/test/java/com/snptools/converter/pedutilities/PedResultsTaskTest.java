@@ -50,7 +50,7 @@ public class PedResultsTaskTest {
         // 4. Run accumulateResults()
         // 5. >>> Compare the partial results array to the expected to confirm the test.
 
-        // *** accumulateResults() compares TWO inputs from the line to a single entry in the majorAlleles array.
+        // *** accumulateResults() in PedResultsTask compares TWO inputs from the line to a single entry in the majorAlleles array.
 
         // 1.
         // majoralleles = 3093, the number of input columns
@@ -88,21 +88,20 @@ public class PedResultsTaskTest {
         partialResults.setAccessible(true);
         int[] testResults = (int[]) partialResults.get(pedResultsTask);
 
-
         // 5. Compare the arrays of step 4 (actual) and step 3 (expected):
         // Check that there were testResults obtained by verifying lengths > 0.
         // Check that the testResults match the expectedResults
         Assertions.assertAll(
             () -> assertTrue(testResults.length > 0),
             () -> assertTrue(expectedResults.length > 0),
-            () -> assertEquals(testResults.length, expectedResults.length),
+            () -> assertEquals(expectedResults.length, testResults.length),
             () -> {
                 for (int i = 0; i < testResults.length; ++i) {
                     assertEquals(expectedResults[i], testResults[i]);
                 }
             }
-
         );
+
     }
 
 }

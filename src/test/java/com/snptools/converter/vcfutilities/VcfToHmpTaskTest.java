@@ -35,4 +35,25 @@ public class VcfToHmpTaskTest {
         VcfToHmpTask vcfToHmpTask = new VcfToHmpTask(TEST_INPUT_VCF, TEST_OUTPUT_VCF, START_LINE, END_LINE, NUMBER_OF_COLUMNS, alleles, outputLineHeaders);
         assertNotNull(vcfToHmpTask);
     }
+
+    /**
+     * Tests whether a provided input line is correctly parsed and interpreted.
+     *
+     * Note: This test uses reflection to selectively call private methods and to
+     *       read private fields.
+     */
+    @Test
+    @DisplayName("shouldAccumulateResults")
+    public void shouldAccumulateResults() { 
+
+        // Need to construct an alleles array too
+
+        // Construct string[] of entries
+        // Construct int[] of expected results
+        // loop on calling accumulateResults()
+        // Copy partialResults to testResults
+        // Compare testResults to expected
+
+
+    }
 }

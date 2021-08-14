@@ -21,6 +21,8 @@ public class FileControllerTest {
 
     final String TEST_INPUT_PED = "./src/test/resources/test.ped";
     final String TEST_OUTPUT_PED = "./src/test/resources/testPed.csv";
+    final String TEST_DNE_FILE = "./src/test/resources/dne.csv";
+    final String TEST_EMPTY_FILE = "./src/test/resources/empty.csv";
 
     final String DOES_NOT_EXIST = "DOES_NOT_EXIST";
     final File FILE_DOES_NOT_EXIST = new File("not a path");
@@ -47,12 +49,15 @@ public class FileControllerTest {
     }
 
     /**
-     * Tests that the expected number of lines is returned from the FileController
+     * Tests that the expected number of lines is returned from the FileController.
+     * Including files that do not exist or are empty.
      */
     @Test
     @DisplayName("testCountTotalLines")
     void testCountTotalLines() {
         assertEquals((END_LINE - START_LINE), FileController.countTotalLines(TEST_INPUT_PED));
+        assertEquals(-1, FileController.countTotalLines(TEST_DNE_FILE));
+        assertEquals(0, FileController.countTotalLines(TEST_EMPTY_FILE));
     }
 
     /**
@@ -154,6 +159,66 @@ public class FileControllerTest {
                 }
             }
         );
+    }
+
+    /**
+     * Note: Uses a cast from int to char for some checks.
+     * 
+     * Tests that the expected byte/int range is correctly interpreted and
+     * filtered to the acceptable values.
+     */
+    @Test
+    @DisplayName("testIntToChar")
+    void testIntToChar() {
+        // Create array of ints inside and outside of acceptable range
+        // Create array of chars with expected values
+        // Compare expected and actual arrays
+        final int[] intsToTest = new int[128];
+        final char[] charsToCheck = new char[128];
+        final char[] expectedChars = new char[128];
+        for (int i = 0; i < 128; ++i) {
+            intsToTest[i] = i;
+            expectedChars[i] = (char) i;
+            charsToCheck[i] = FileController.intToChar(intsToTest[i]);
+        }
+
+        // Check most values:
+        Assertions.assertAll(
+            () -> {
+                for (int i = 0; i < 43; ++i) {
+                    assertEquals('X', charsToCheck[i]);
+                }
+            },
+            () -> {
+                for (int i = 43; i < 59; ++i) {
+                    assertEquals(expectedChars[i], charsToCheck[i]);
+                    assertEquals((char) i, charsToCheck[i]);
+                }
+            },
+            () -> {
+                assertEquals('A', charsToCheck[65]);
+                assertEquals('A', charsToCheck[97]);
+
+                assertEquals('C', charsToCheck[67]);
+                assertEquals('C', charsToCheck[99]);
+
+                assertEquals('G', charsToCheck[71]);
+                assertEquals('G', charsToCheck[103]);
+
+                assertEquals('N', charsToCheck[78]);
+                assertEquals('N', charsToCheck[110]);
+
+                assertEquals('T', charsToCheck[84]);
+                assertEquals('T', charsToCheck[116]);
+
+                assertEquals('|', charsToCheck[124]);
+
+                assertEquals('X', charsToCheck[125]);
+                assertEquals('X', charsToCheck[126]);
+                assertEquals('X', charsToCheck[127]);
+            }
+        );
+
     }
 
     /**

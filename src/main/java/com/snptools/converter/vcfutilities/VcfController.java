@@ -57,6 +57,10 @@ public class VcfController {
         inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
 
         // Simple integrity check:
+        if (totalInputLines <= 0 || numberOfHeaderLines <= 0 || inputColumnCount <= 0) {
+            System.out.println("\nThe file header is missing. Could not detect column titles. Please make sure the vcf file is valid.\n");
+            return;
+        }
         if (numberOfHeaderColumns < 8 || numberOfHeaderColumns > 9) {
             System.out.println("\nThe header column count appears in valid. Please make sure the vcf file is valid.\n");
             return;

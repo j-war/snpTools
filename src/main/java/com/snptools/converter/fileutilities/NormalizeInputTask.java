@@ -108,7 +108,11 @@ public class NormalizeInputTask implements Runnable {
                 lineScanner.close();
                 return;
             }
-            partialResults[k] = value.substring(0, columnWidth); // Only need the GT (genotype) information, drop the rest.
+            if (value.length() >= columnWidth) {
+                partialResults[k] = value.substring(0, columnWidth); // Only need the GT (genotype) information, drop the rest.
+            } else { // else, data entry appears invalid
+                partialResults[k] = "";
+            }
         }
         lineScanner.close();
     }

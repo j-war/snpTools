@@ -129,18 +129,15 @@ public class PedControllerTest {
         // 1. set workers to = 1
         // 2. set totalInputLines = 3
         // 3. set inputColumnCount = 474
-        
         // 4. should call processInputThreaded but instead just call run/start on pedSumTask
-        
         // 5. initTotals()
         // 6. Several options:
-        //      -> mergeThreadTotals() 
-        //      -> set the controllers field = tasks field. <-
-        //      -> processInputThreaded(1)
+        //      x-> mergeThreadTotals() 
+        //       -> set the controllers field = tasks field. <-
+        //      x-> processInputThreaded(1)
         // 7. >>>> calculateMajors()
         // 8. >>>> calculateResultsThreaded
         //      -> Cherry pick a few points.
-
 
         // 1.
         PedController pedController = new PedController(TEST_INPUT_PED, TEST_OUTPUT_PED);
