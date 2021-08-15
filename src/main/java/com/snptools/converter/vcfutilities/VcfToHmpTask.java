@@ -130,10 +130,12 @@ public class VcfToHmpTask implements Runnable {
                 int positionOne = Integer.parseInt(entry, 0, 1, 10);
                 int positionTwo = Integer.parseInt(entry, 2, 3, 10);
 
+                //System.out.println("" + positionOne + " " + positionTwo);
                 String[] values = alleles[lineNumber].split(",");
                 String entryOne = "" + values[positionOne];
                 String entryTwo = "" + values[positionTwo];
                 String result = ""; // The output result that will be saved
+                //System.out.println("" + entryOne + " " + entryTwo);
 
                 /* Adjust to be alphabetical for HMP format:
                     Options: [A, C, G, T, N]

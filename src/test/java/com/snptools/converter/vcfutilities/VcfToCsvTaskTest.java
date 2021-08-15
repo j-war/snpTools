@@ -47,12 +47,6 @@ public class VcfToCsvTaskTest {
      *
      * Note: This test uses reflection to selectively call private methods and to
      *       read private fields.
-     * @throws SecurityException
-     * @throws NoSuchFieldException
-     * @throws InvocationTargetException
-     * @throws IllegalArgumentException
-     * @throws IllegalAccessException
-     * @throws NoSuchMethodException
      */
     @Test
     @DisplayName("shouldAccumulateResults")
