@@ -185,6 +185,7 @@ public class PedControllerTest {
         calculateMajorsMethod.invoke(pedController);
 
         // 8.
+        // Compare expected and actual
         // Cherry picked data points:
         // 229 - 1 contains: 0-0, C-C, T-T
         // 246 - 1 contains: G-G, C-C, 0-0

@@ -134,7 +134,7 @@ public class VcfController {
      * counting when a '#' is not found, an error occurs, or it reaches the end of the file.
      *
      * @return  The number of sequential lines from the start of the file that were detected.
-     *          Returns 0 on an error.
+     *          Returns 0 on any error.
      */
     private int countHeaderLines() {
         try (BufferedReader reader = new BufferedReader(new FileReader(vcfFileName))) {
@@ -146,11 +146,10 @@ public class VcfController {
                     Scanner lineScanner = new Scanner(line);
                     if (lineScanner.hasNext()) {
                         String token = lineScanner.next();
-                        if (token.startsWith("#")) {
+                        if (token.startsWith("#")) { // "#CHROM"
                             //System.out.println("# found: " + token);
                             ++lines;
                         } else {
-                            //numberOfHeaderLines = lines; // Save the result.
                             lineScanner.close();
                             return lines; // Exit early.
                         }
@@ -162,7 +161,7 @@ public class VcfController {
                 }
             }
             //numberOfHeaderLines = lines; // Save the total.
-            return lines;
+            return 0; // The early exit path should be the only with non-zero - this means that path detected "#CHROM".
         } catch (FileNotFoundException e) {
             System.out.println("The input file could not be found or it could not be opened.");
             e.printStackTrace();
@@ -206,12 +205,13 @@ public class VcfController {
                     }
                 }
                 lineScanner.close();
+                return lineLength;
             } else {
                 System.out.println("The read line was null when checking the file header.");
                 return 0;
             }
             //inputColumnCount = lineLength; // Save the total.
-            return lineLength;
+            //return lineLength;
         } catch (FileNotFoundException e) {
             System.out.println("The input file could not be found or it could not be opened.");
             e.printStackTrace();
@@ -644,6 +644,24 @@ outputLineHeaders[1] onwards =
             System.out.println("[" + i + "] ");
             System.out.println("[" + alleles[i] + "]");
         }
+    }
+
+    /**
+     * Returns the input file path with an extension.
+     *
+     * @return  The input file name and path with an extension.
+     */
+    public String getInputFilePath() {
+        return vcfFileName;
+    }
+
+    /**
+     * Returns the output file path with an extension.
+     *
+     * @return  The output file name and path with an extension.
+     */
+    public String getOutputFilePath() {
+        return outputFileName;
     }
 
 }
