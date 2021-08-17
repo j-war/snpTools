@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 /**
@@ -78,9 +77,6 @@ public class PedResultsTask implements Runnable {
         } catch (IOException e) {
             System.out.println("There was a problem accessing the input file or writing to the output.");
             e.printStackTrace();
-        } catch (NoSuchElementException e) {
-            System.out.println("No data found in the PED file. Possible malformed file.");
-            e.printStackTrace();
         }
     }
 
@@ -118,7 +114,6 @@ public class PedResultsTask implements Runnable {
 
         // Parse line into results:
         for (int k = 0; k < columns; ++k) {
-        //while (lineScanner.hasNext()) {
             int result = 0;
             String value = "";
             if (lineScanner.hasNext()) {

@@ -14,6 +14,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * A set of unit tests for VcfToHmpTask.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class VcfToHmpTaskTest {
 
@@ -56,8 +59,7 @@ public class VcfToHmpTaskTest {
     @DisplayName("shouldAccumulateResults")
     public void shouldAccumulateResults() throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchFieldException { 
 
-        // Need to construct an alleles array too - needs NUMBER_OF_COLUMNS entries.
-
+        // Construct an alleles array too - needs NUMBER_OF_COLUMNS entries.
         // Construct string[] of entries
         // Construct int[] of expected results
         //    Loop on calling accumulateResults(lineNumber, j=totalColumns, entry=3 chars)
@@ -84,10 +86,11 @@ public class VcfToHmpTaskTest {
 
         Method accumulateResults = VcfToHmpTask.class.getDeclaredMethod("accumulateResults", int.class, int.class, String.class);
         accumulateResults.setAccessible(true);
-        
+
         Field partialResults = vcfToHmpTask.getClass().getDeclaredField("partialResults");
         partialResults.setAccessible(true);
 
+        System.out.println("\nNote: Ignore \"Skipping input ... input data appears inconsistent.\" print statements while testing.\n");
         // 1.
         for (int j = 0; j < entriesToTestOne.length; ++j) {
             accumulateResults.invoke(vcfToHmpTask, 0, j, entriesToTestOne[j]); 

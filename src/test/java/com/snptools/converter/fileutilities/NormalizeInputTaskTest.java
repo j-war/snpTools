@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * A set of unit tests for NormalizeInputTask.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class NormalizeInputTaskTest {
 
@@ -228,10 +231,6 @@ public class NormalizeInputTaskTest {
                     assertFalse(expectedHmpResultsTwo[i] == hmpTestResultsTwo[i]);
                     assertFalse(hmpTestResultsTwo[i].equalsIgnoreCase(expectedHmpResultsTwo[i]));
                     assertEquals(hmpTestResultsTwo[i].length(), COLUMN_WIDTH_HMP);
-                }
-            },
-            () -> {
-                for (int i = 0; i < NUMBER_OF_COLUMNS_HMP; ++i) {
                 }
             }
         );

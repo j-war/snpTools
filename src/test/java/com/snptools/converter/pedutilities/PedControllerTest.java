@@ -16,6 +16,9 @@ import java.lang.reflect.InvocationTargetException;
 
 /**
  * A set of unit tests for PedController.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class PedControllerTest {
 

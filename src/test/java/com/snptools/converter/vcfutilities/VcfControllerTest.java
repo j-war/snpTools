@@ -16,6 +16,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * A set of unit tests for VcfController.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class VcfControllerTest {
 

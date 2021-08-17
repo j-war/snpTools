@@ -15,7 +15,7 @@ import java.util.Scanner;
  * completed and the thread was successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.1, August 2021
+ * @version 1.2, August 2021
  */
 public class HmpSumTask implements Runnable {
 
@@ -23,6 +23,8 @@ public class HmpSumTask implements Runnable {
     private final int startLine;
     private final int endLine;
     private final int totalColumns;
+    private final int NUMBER_OF_BASES = 5; // Number of bases to create a sum for: ACTG0/X.
+    private final int COLUMN_WIDTH_HMP = 2; // Depends on ploidiness. Diploid=2.
 
     private List<int[]> totals = Collections.synchronizedList(new ArrayList<>()); // All access, including reading through .get(), must be in a synchronized block.
 
@@ -49,7 +51,7 @@ public class HmpSumTask implements Runnable {
         // Populate the totals of arrays to store counts of ACTGN??
         synchronized (totals) {
             for (int i = 0; i < endLine - startLine; ++i) {
-                totals.add(i, new int[5]);
+                totals.add(i, new int[NUMBER_OF_BASES]);
             }
         }
     }
@@ -83,15 +85,19 @@ public class HmpSumTask implements Runnable {
         } catch (IOException e) {
             System.out.println("There was a problem accessing the intermediate file.");
             e.printStackTrace();
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Index does not match expectation. Possible malformed HMP file.");
+            e.printStackTrace();
         }
     }
 
     /**
      * Counts and accumulates SNP frequencies from the provided line into the
-     * synchronized totals data structure.
+     * synchronized totals data structure. This function expects a CSV string
+     * from a NormalizedTask.
      * 
      * @param lineNumber  The line's number that is being parsed.
-     * @param line  The TSV line read from the file that will be tallied.
+     * @param line  The CSV line read from the file that will be tallied.
      */
     private void accumulateTotals(int lineNumber, String line) {
         if (line == null || line.isBlank() || line.isEmpty()) {
@@ -100,6 +106,7 @@ public class HmpSumTask implements Runnable {
         }
         Scanner lineScanner = new Scanner(line);
         lineScanner.useDelimiter(",");
+        // System.out.println("lineNumber:[" + lineNumber + "] Line: [" + line + "]");
         // 5.
         for (int j = 0; j < totalColumns; ++j) {
             //System.out.println("Line: " + line);
@@ -111,41 +118,47 @@ public class HmpSumTask implements Runnable {
                     //System.out.println("Value: [" + value + "] ");
                     // Switch on the value to count frequency:
                     // 7.
-                    switch (value.substring(0, 1)) {
-                        case "A":
-                            ++(totals.get(lineNumber)[0]);
-                            break;
-                        case "C":
-                            ++(totals.get(lineNumber)[1]);
-                            break;
-                        case "T":
-                            ++(totals.get(lineNumber)[2]);
-                            break;
-                        case "G":
-                            ++(totals.get(lineNumber)[3]);
-                            break;
-                        default: // Unknowns.
-                            ++(totals.get(lineNumber)[4]);
-                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                            break;
-                    }
-                    switch (value.substring(1, 2)) {
-                        case "A":
-                            ++(totals.get(lineNumber)[0]);
-                            break;
-                        case "C":
-                            ++(totals.get(lineNumber)[1]);
-                            break;
-                        case "T":
-                            ++(totals.get(lineNumber)[2]);
-                            break;
-                        case "G":
-                            ++(totals.get(lineNumber)[3]);
-                            break;
-                        default: // Unknowns.
-                            ++(totals.get(lineNumber)[4]);
-                            //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                            break;
+                    if (value.length() == COLUMN_WIDTH_HMP) { // == 2.
+                        switch (value.substring(0, 1)) {
+                            case "A", "a":
+                                ++(totals.get(lineNumber)[0]);
+                                break;
+                            case "C", "c":
+                                ++(totals.get(lineNumber)[1]);
+                                break;
+                            case "T", "t":
+                                ++(totals.get(lineNumber)[2]);
+                                break;
+                            case "G", "g":
+                                ++(totals.get(lineNumber)[3]);
+                                break;
+                            default: // Unknowns.
+                                ++(totals.get(lineNumber)[4]);
+                                //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                                break;
+                        }
+                        switch (value.substring(1, 2)) {
+                            case "A", "a":
+                                ++(totals.get(lineNumber)[0]);
+                                break;
+                            case "C", "c":
+                                ++(totals.get(lineNumber)[1]);
+                                break;
+                            case "T", "t":
+                                ++(totals.get(lineNumber)[2]);
+                                break;
+                            case "G", "g":
+                                ++(totals.get(lineNumber)[3]);
+                                break;
+                            default: // Unknowns.
+                                ++(totals.get(lineNumber)[4]);
+                                //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                                break;
+                        }
+                    } else { // Entry is an incorrect size:
+                        System.out.println("Skipping input. Malformed hmp file - the size of an entry was unexpected.");
+                        lineScanner.close();
+                        return;
                     }
                 } else {
                     System.out.println("Malformed hmp file - there is an unexpected number of entries.");

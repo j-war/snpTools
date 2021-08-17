@@ -16,6 +16,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * A set of unit tests for FileController.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class FileControllerTest {
 
@@ -113,8 +116,6 @@ public class FileControllerTest {
             () -> assertTrue( FileController.countTotalLines(TEST_OUTPUT_PED) != 0 ),
             () -> assertTrue( FileController.countTotalLines(TEST_OUTPUT_PED) != 1 )
         );
-
-
     }
 
     /**

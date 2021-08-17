@@ -97,7 +97,9 @@ public class NormalizeInputTask implements Runnable {
             return;
         }
         Scanner lineScanner = new Scanner(line);
-        for (int j = 0; j < startColumn; ++j) { lineScanner.next(); } // Skip the line header.
+        for (int j = 0; j < startColumn; ++j) {
+            if (lineScanner.hasNext()) { lineScanner.next(); } // else, fall through.
+        } // Skip the line header.
         // Parse line into partialResults:
         for (int k = 0; k < numberOfColumns; ++k) {
             String value = "";
@@ -116,6 +118,5 @@ public class NormalizeInputTask implements Runnable {
         }
         lineScanner.close();
     }
-
 
 }

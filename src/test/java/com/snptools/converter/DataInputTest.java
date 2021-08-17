@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit test for DataInput.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class DataInputTest {
 
@@ -53,6 +56,7 @@ public class DataInputTest {
     @Test
     @DisplayName("testCanAccessDataFiles")
     void testCanAccessDataFiles() {
+        System.out.println("\nNote: Ignore \"Error: Cannot read ... closing.\" print statements while testing.\n");
         // TRUE: Good, good
         // FALSE: Good, bad
         // FALSE: Bad, good
@@ -63,7 +67,6 @@ public class DataInputTest {
             () -> assertFalse(DataInput.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, TEST_OUTPUT_PED)),
             () -> assertFalse(DataInput.canAccessDataFiles(DOES_NOT_EXIST + TEST_INPUT_PED, DOES_NOT_EXIST + TEST_OUTPUT_PED))
         );
-
     }
 
 }

@@ -153,7 +153,7 @@ public class VcfController {
                             lineScanner.close();
                             return lines; // Exit early.
                         }
-                    }
+                    } // else, fall through.
                     lineScanner.close();
                 } else {
                     System.out.println("The read line was null when checking the file header.");

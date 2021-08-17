@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Scanner;
 
 /**
@@ -72,9 +71,6 @@ public class PedSumTask implements Runnable {
         } catch (IndexOutOfBoundsException e) {
             System.out.println("Index does not match expectation. Possible malformed ped file.");
             e.printStackTrace();
-        } catch (NoSuchElementException e) {
-            System.out.println("No data found. Possible malformed ped file.");
-            e.printStackTrace();
         }
 
     }
@@ -91,7 +87,9 @@ public class PedSumTask implements Runnable {
             return;
         }
         Scanner lineScanner = new Scanner(line);
-        for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { lineScanner.next(); } // Skip line header.
+        for (int j = 0; j < COLUMNS_TO_SKIP; ++j) { // Skip line header.
+            if (lineScanner.hasNext()) { lineScanner.next(); } // else, fall through.
+        }
         synchronized (totals) {
             for (int k = 0; k < columns; ++k) {
                 String value = "";

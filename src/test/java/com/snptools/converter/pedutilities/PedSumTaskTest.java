@@ -17,6 +17,9 @@ import java.lang.reflect.Method;
 
 /**
  * A set of unit tests for PedSumTask.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
  */
 public class PedSumTaskTest {
 
@@ -107,26 +110,27 @@ public class PedSumTaskTest {
             }
         }
 
-        // 2a. Load ds:
-        // L1:  "A C  T C  T G  A C  T G  0 G  C 0  G A  C T  G A"
-        // L2:  "G C  T G  A C  T A  A C  T G  A C  T G  0 G  C 0"
-        // L3:  "A A  C T  G 0  G C  0 C  T G  A C  T G  A C  T G"
+        // 2a. Load ds - Sum columns:
+        // 
+        // L1:   "A C  T C  T G  A C  T G  0 G  C 0  G A  C T  G A"
+        // L2:   "G C  T G  A C  T A  A C  T G  A C  T G  0 G  C 0"
+        // L3:   "A A  C T  G 0  G C  0 C  T G  A C  T G  A C  T G"
         //
-        //    A   3    0    1    2    1    0    2    1    1    1
-        //    C   2    2    1    2    2    0    3    0    2    1
-        //    T   0    3    1    1    1    2    0    2    1    1
-        //    G   1    1    2    1    1    3    0    3    1    2
-        //    0   0    0    1    0    1    1    1    0    1    1
+        // A:      3    0    1    2    1    0    2    1    1    1
+        // C:      2    2    1    2    2    0    3    0    2    1
+        // T:      0    3    1    1    1    2    0    2    1    1
+        // G:      1    1    2    1    1    3    0    3    1    2
+        // 0:      0    0    1    0    1    1    1    0    1    1
         //
-        // Totals 6    6    6    6    6    6    6    6    6    6
+        // Totals: 6    6    6    6    6    6    6    6    6    6
 
         // Load the expectedTotals data structure with the hand calculated results:
         synchronized (expectedTotals) {
-            expectedTotals.get(0)[0] = 3;
-            expectedTotals.get(0)[1] = 2;
-            expectedTotals.get(0)[2] = 0;
-            expectedTotals.get(0)[3] = 1;
-            expectedTotals.get(0)[4] = 0;
+            expectedTotals.get(0)[0] = 3; // A
+            expectedTotals.get(0)[1] = 2; // C
+            expectedTotals.get(0)[2] = 0; // T
+            expectedTotals.get(0)[3] = 1; // G
+            expectedTotals.get(0)[4] = 0; // 0/X/N
 
             expectedTotals.get(1)[0] = 0;
             expectedTotals.get(1)[1] = 2;
