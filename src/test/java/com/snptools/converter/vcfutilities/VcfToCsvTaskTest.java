@@ -68,7 +68,7 @@ public class VcfToCsvTaskTest {
 
         Method accumulateResults = VcfToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
         accumulateResults.setAccessible(true);
-        // loop here:
+
         for (int i = 0; i < entriesToTest.length; ++i) {
             accumulateResults.invoke(vcfToCsvTask, i, entriesToTest[i]);
         }

@@ -16,6 +16,17 @@ The general flow of conversion works as follows:
 * generate results
 * merge results
 * cleanup temporary files
+
+***
+# Requirements:
+Quad-core CPU, 8gb RAM, ssd
+
+Java 16.0.2
+
+Maven 3.8.1
+
+JUnit 5
+
 ***
 # Compilation and running:
 File names as input arguments should be relative and have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
@@ -76,45 +87,44 @@ Folders:
 ```
 java -cp Converter DataInput
 
-~/InputFolder/
-~/OutputFolder/
-~/Converter/
+~/snpTools/
     |
-    ---> DataInput.class
-    ---> FileUtilities/
-            |
-            ---> FileHandler.class
-            ---> NormalizeInputTask.class
-
-    ---> pedUtilities/
-            |
-            ---> PedController.class
-            ---> pedToCsv/
-                    |
-                    ---> PedSumTask.class
-                    ---> PedResultsTask.class
-
-    ---> vcfUtilities/
-            |
-            ---> VcfController.class
-            ---> vcfToCsv/
-                    |
-                    ---> VcfToCsvTask.class
-
-            ---> vcfToHmp/
-                    |
-                    ---> VcfToCsvTask.class
-
-    ---> hmpUtilities/
-            |
-            ---> HmpController.class
-            ---> hmpToCsv/
-                    |
-                    ---> HmpSumTask.class
-
-            ---> hmpToCsv/
-                    |
-                    ---> HmpResultsTask.class
+    pom.xml
+    README.MD
+    InputFolder/ ...
+    OutputFolder/ ...
+    target/ ...
+    Docs/ ...
+    src/test/ ...
+    src/main/
+        |
+        resources/ ...
+        java/com/snptools/converter/
+                              |
+                              DataInput.java (main entry)
+                              |
+                              fileutilities/
+                              |       |
+                              |       FileHandler.java
+                              |       NormalizeInputTask.java
+                              |
+                              pedutilities/
+                              |       |
+                              |       PedController.java
+                              |       PedSumTask.java
+                              |       PedResultsTask.java
+                              |
+                              vcfutilities/
+                              |       |
+                              |       VcfController.java
+                              |       VcfToCsvTask.java
+                              |       VcfToCsvTask.java
+                              |
+                              hmputilities/
+                                      |
+                                      HmpController.java
+                                      HmpSumTask.java
+                                      HmpResultsTask.java
 
 ```
 

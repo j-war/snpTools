@@ -36,6 +36,10 @@ public class HmpToCsvTask implements Runnable {
 
     /**
      * Compares the input file to the calculated site's major and writes its output to the provided path.
+     * This conversion involves a transpose of HMP columns into CSV lines.
+     * The startColumn and endColumn arguments are used for file pointer positioning while the
+     * totalColumns and totalLines arguments are used for transposing and transforming the data.
+     * 
      *
      * @param inputFilename The input file path and file name and an extension for processing.
      * @param outputFilename    The  The output file path and file name with an extension for processing.
@@ -71,6 +75,7 @@ public class HmpToCsvTask implements Runnable {
                     */
                     String entry = "";
                     for (int k = 0; k < SIZE_OF_COLUMN - 1; ++k) {
+                        // Column size is 3 but we only want the first two chars while dropping the trailing comma.
                         entry += FileController.intToChar(randomAccessFile.read());
                     }
                     accumulateResults(j, entry);

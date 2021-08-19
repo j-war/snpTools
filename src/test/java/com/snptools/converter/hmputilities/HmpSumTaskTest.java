@@ -82,8 +82,7 @@ public class HmpSumTaskTest {
      * Tests whether a read line from the input file is correctly parsed and
      * interpreted into the totals data structure from the HmpSumTask workers.
      *
-     * Note: This test uses reflection to selectively call private methods and to
-     *       read private fields.
+     * Note: This test uses reflection to selectively call private methods.
      */
     @Test
     @DisplayName("shouldAccumulateTotals")
