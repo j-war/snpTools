@@ -651,7 +651,8 @@ public class HmpController {
                     ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
                     totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
                     totalInputLines - NUMBER_OF_HEADER_LINES,
-                    majorAllelesValues
+                    majorAllelesValues,
+                    hmpPloidiness
                 );
                 threadPool[i] = new Thread(resultsPool[i]);
                 threadPool[i].start();

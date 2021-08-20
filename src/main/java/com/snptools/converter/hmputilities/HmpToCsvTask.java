@@ -21,6 +21,7 @@ import com.snptools.converter.fileutilities.FileController;
 public class HmpToCsvTask implements Runnable {
 
     private final int SIZE_OF_COLUMN = 3; // Including the comma: Example: "AA," is the column including the comma seperator.
+    private final int ploidWidth;
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
@@ -49,7 +50,7 @@ public class HmpToCsvTask implements Runnable {
      * @param totalLines    The total number of lines to process.
      * @param majorAllelesValues    A reference to the previously calculated major allleles.
      */
-    public HmpToCsvTask(String inputFilename, String outputFilename, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues) {
+    public HmpToCsvTask(String inputFilename, String outputFilename, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int ploidiness) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
         this.startColumn = startColumn;
@@ -57,6 +58,7 @@ public class HmpToCsvTask implements Runnable {
         this.totalColumns = totalColumns;
         this.totalLines = totalLines;
         this.majorAllelesValues = majorAllelesValues;
+        this.ploidWidth = ploidiness;
         this.partialResults = new int[totalLines];
     }
 
@@ -68,13 +70,13 @@ public class HmpToCsvTask implements Runnable {
         ) {
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
-                    randomAccessFile.seek(j * totalColumns * SIZE_OF_COLUMN + i * SIZE_OF_COLUMN); // Move pointer into position.
+                    randomAccessFile.seek(j * totalColumns * (ploidWidth + 1) + i * (ploidWidth + 1)); // Move pointer into position.
                     /* Convert intermediate value to allele:
                         * The RandomAccessFile.read() function returns bytes:
                         * convert bytes to char, then interpet the string.
                     */
                     String entry = "";
-                    for (int k = 0; k < SIZE_OF_COLUMN - 1; ++k) {
+                    for (int k = 0; k < ploidWidth; ++k) {
                         // Column size is 3 but we only want the first two chars while dropping the trailing comma.
                         entry += FileController.intToChar(randomAccessFile.read());
                     }
@@ -115,9 +117,15 @@ public class HmpToCsvTask implements Runnable {
         int result = 0;
         // Compare allele to majorAllelesValues array to determine output:
         for (int k = 0; k < entry.length(); ++k) {
-            String allele = entry.substring(0 + k, 1 + k);
+            String allele = entry.substring(k, 1 + k);
             switch (allele) {
-                case "A", "C", "G", "T", "a", "c", "g", "t":
+                case "A", "C", "G", "T",
+                     "a", "c", "g", "t",
+                     "R", "Y", "S", "W", "K", "M",
+                     "r", "y", "s", "w", "k", "m",
+                     "B", "D", "H", "V", "N",
+                     "b", "d", "h", "v", "n",
+                     ".", "-":
                     if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
                         ++result;
                     }

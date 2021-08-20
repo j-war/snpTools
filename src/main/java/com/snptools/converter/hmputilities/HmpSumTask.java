@@ -122,7 +122,7 @@ public class HmpSumTask implements Runnable {
                     // 7.
                     if (value.length() >= 1) {
                         for (int i = 0; i < value.length(); ++i) {
-                            switch (value.substring(0 + i, 1 + i)) {
+                            switch (value.substring(i, 1 + i)) {
                                 case "A", "a":
                                     ++(totals.get(lineNumber)[0]);
                                     break;

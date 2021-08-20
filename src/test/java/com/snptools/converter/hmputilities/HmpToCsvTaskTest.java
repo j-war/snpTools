@@ -45,7 +45,7 @@ public class HmpToCsvTaskTest {
     @Test
     @DisplayName("shouldConstructHmpToCsvTask")
     public void shouldConstructHmpToCsvTask() {
-        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_COLUMNS, TOTAL_LINES, majorAlleles);
+        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_COLUMNS, TOTAL_LINES, majorAlleles, 1);
         assertNotNull(hmpToCsvTask);
     }
 
@@ -73,16 +73,16 @@ public class HmpToCsvTaskTest {
 
         final String[] dataLineOne = new String[]{"aa", "CC", "TT", "gG", "AC", "TG", "CT", "GT", "NN", "TT"};
         final String[] dataLineTwo = new String[]{"NN", "GT", "GG", "TT", "AA", "TT", "Gt", "TT", "NN", "TG"};
-        final String[] dataLineThree = new String[]{"CG", "GC", "nN", "NN", "NN", "GA", "GA", "GC", "GT", "NN"};
+        final String[] dataLineThree = new String[]{"CG", "GC", "nN", "00", "NN", "GA", "GA", "GC", "GT", "NN"};
         final String[][] dataLines = new String[][]{dataLineOne, dataLineTwo, dataLineThree};
 
-        final int[] expectedResultsOne = new int[]{0, 2, 2, 2, 2, 1, 2, 1, 5, 2};
-        final int[] expectedResultsTwo = new int[]{5, 2, 2, 2, 2, 0, 1, 2, 5, 2};
-        final int[] expectedResultsThree = new int[]{2, 2, 5, 5, 5, 2, 1, 1, 2, 5};
+        final int[] expectedResultsOne = new int[]{0, 2, 2, 2, 2, 1, 2, 1, 2, 2};
+        final int[] expectedResultsTwo = new int[]{2, 2, 2, 2, 2, 0, 1, 2, 2, 2};
+        final int[] expectedResultsThree = new int[]{2, 2, 2, 5, 2, 2, 1, 1, 2, 2};
         final int[][] expectedResults = new int[][]{expectedResultsOne, expectedResultsTwo, expectedResultsThree};
 
         // 2.
-        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles);
+        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, 2);
 
         // 3a.
         Method accumulateResultsMethod = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
@@ -95,12 +95,12 @@ public class HmpToCsvTaskTest {
             for (int i = 0; i < NUMBER_OF_TEST_COLUMNS; ++i) {
                 accumulateResultsMethod.invoke(hmpToCsvTask, i, dataLines[jCopy][i]);
             }
-    
+
             // 4.
             Field partialResults = hmpToCsvTask.getClass().getDeclaredField("partialResults");
             partialResults.setAccessible(true);
             int[] testResults = (int[]) partialResults.get(hmpToCsvTask);
-    
+
             // 5.
             // Check that results were obtained
             // Check that the expected number of results were obtained

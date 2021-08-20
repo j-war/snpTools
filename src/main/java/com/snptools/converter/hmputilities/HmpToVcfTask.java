@@ -132,28 +132,93 @@ public class HmpToVcfTask implements Runnable {
         // 
         // do a final check that it's not "." and construct the result.
 
-        if (ploidWidth == 1) {
+        try {
+            String parsedEntries[] = new String[ploidWidth];
+            // Check the strand direction:
+            if (strandDirections[lineNumber].equalsIgnoreCase("+")) { // if strand == +, then iterate from end to start
+                for (int i = entry.length(); i > 0; --i) {
+                    parsedEntries[Math.abs(i - entry.length())] = "" + entry.substring(i - 1, i);
+                }
+            } else { // else strand == -, and then iterate from start to end.
+                for (int i = 0; i < entry.length(); ++i) {
+                    parsedEntries[i] = "" + entry.substring(0 + i, 1 + i);
+                }
+            }
+
+
+            String[] values = alleles[lineNumber].split(",");
+
+            String parsedEntriesIndices[] = new String[ploidWidth];
+            // Compare entries to values[] to determine index, append index to result.
+            for (int k = 0; k < parsedEntriesIndices.length; ++k) {
+                //String entryToTest = parsedEntriesResults[k];
+                for (int j = 0; j < values.length; ++j) { // Iterate through values
+                    if ((parsedEntries[k]).compareToIgnoreCase(values[j]) == 0) {
+                        parsedEntriesIndices[k] = "" + j;
+                    }
+                }
+            }
+            String results = "";
+            for (int k = 0; k < parsedEntriesIndices.length; ++k) {
+                if (((parsedEntries[k]).compareToIgnoreCase(".") == 0) || ((parsedEntries[k]).compareToIgnoreCase("-") == 0)) {
+                    results += ".";
+                } else {
+                    if (k < parsedEntriesIndices.length - 1) {
+                        results += ("" + parsedEntriesIndices[k] + "/");
+                    } else {
+                        results += ("" + parsedEntriesIndices[k]);
+                    }
+                }
+            }
+            partialResults[columnNumber] = results;
+
+        } catch (IndexOutOfBoundsException e) {
+            System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
+            // Likely a malformed file or programming logical error:
+            String errorResult = "";
+
+
+
+            
+            // Temporary coverage:
+            switch (ploidWidth) {
+                case 1:
+                    errorResult = ".";
+                    break;
+                case 2:
+                    errorResult = "./.";
+                    break;
+                case 3:
+                    errorResult = "././.";
+                    break;
+                case 4:
+                    errorResult = "./././.";
+                    break;
+                default:
+                    errorResult = ".";
+                    break;
+            }
+            partialResults[columnNumber] = errorResult;
+        }
+
+
+
+/*
+        if (ploidWidth == 10) {
             //System.out.println("entry: [" + entry + "]");
             try {
-                String entryOne = "" + entry;
-
-                String entryOneResult = ".";
-                String result = "";
+                String result = ".";
 
                 String[] values = alleles[lineNumber].split(",");
 
-                // System.out.println("entry: [" + entry + "]");
                 for (int k = 0; k < values.length; ++k) { // Convert entry to index into the collected values:
-                    // System.out.println("Values-entry: [" + entry + "][" + k + "]");
-                    if (entryOne.compareToIgnoreCase(values[k]) == 0) {
-                        entryOneResult = "" + k;
+                    if (entry.compareToIgnoreCase(values[k]) == 0) {
+                        result = "" + k;
                     }
                 }
                 // If the entry was not found in the previously collected alleles array, assign a blank value:
-                if (entryOne.compareToIgnoreCase(".") == 0) {
+                if (entry.compareToIgnoreCase(".") == 0) {
                     result = ".";
-                } else {
-                    result = entryOneResult;
                 }
                 partialResults[columnNumber] = result;
             } catch (IndexOutOfBoundsException e) {
@@ -162,7 +227,7 @@ public class HmpToVcfTask implements Runnable {
                 partialResults[columnNumber] = ".";
             }
 
-        } else if (ploidWidth == 2) {
+        } else if (ploidWidth == 20) {
             try {
                 String entryOne = "";
                 String entryTwo = "";
@@ -203,8 +268,7 @@ public class HmpToVcfTask implements Runnable {
                 // Likely a malformed file or programming logical error:
                 partialResults[columnNumber] = "./."; // Two '.' characters for diploids, three for triploid, etc.
             }
-        }
-
+        }*/
 
 
     }
