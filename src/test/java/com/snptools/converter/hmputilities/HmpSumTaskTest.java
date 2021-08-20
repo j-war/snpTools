@@ -37,7 +37,7 @@ public class HmpSumTaskTest {
     final int COLUMN_WIDTH = 2; // <--- Depends on ploidiness. Diploid=2.
 
     final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
-    final int NUMBER_OF_BASES = 5; // ACTG0
+    final int NUMBER_OF_BASES = 16 + 1; // ACTG...
 
     /**
      * Tests whether the HmpSumTask worker was created successfully.
@@ -66,13 +66,11 @@ public class HmpSumTaskTest {
             () -> assertEquals(TOTAL_LINES, (hmpSumTask.getTotals()).size()),
             () -> {
                 for (int i = 0; i < END_LINE_HMP - START_LINE_HMP; ++i) {
-                    assertEquals(NUMBER_OF_BASES_TO_SUM, (
-                        (hmpSumTask.getTotals()).get(i)[0]
-                        + (hmpSumTask.getTotals()).get(i)[1]
-                        + (hmpSumTask.getTotals()).get(i)[2]
-                        + (hmpSumTask.getTotals()).get(i)[3]
-                        + (hmpSumTask.getTotals()).get(i)[4]
-                    ));
+                    int sum = 0;
+                    for (int j = 0; j < NUMBER_OF_BASES; ++j) {
+                        sum += (hmpSumTask.getTotals()).get(i)[j];
+                    }
+                    assertEquals(NUMBER_OF_BASES_TO_SUM, sum);
                 }
             }
         );
@@ -105,6 +103,7 @@ public class HmpSumTaskTest {
                 expectedTotals.add(i, new int[NUMBER_OF_BASES]);
             }
         }
+
         final String dataLineOne = "aa,CC,TT,gG,AC,TG,CT,GT,NN,TT";
         final String dataLineTwo = "NN,GT,GG,TT,AA,TT,Gt,TT,NN,TG";
         final String dataLineThree = "CG,GC,nN,NN,NN,GA,GA,GC,GT,NN";
@@ -115,26 +114,26 @@ public class HmpSumTaskTest {
             // dataLineOne:
             expectedTotals.get(0)[0] = 3; // A
             expectedTotals.get(0)[1] = 4; // C
-            expectedTotals.get(0)[2] = 7; // T
-            expectedTotals.get(0)[3] = 4; // G
-            expectedTotals.get(0)[4] = 2; // 0/X/N
+            expectedTotals.get(0)[2] = 4; // G
+            expectedTotals.get(0)[3] = 7; // T
+            expectedTotals.get(0)[14] = 2; // N
             // dataLineTwo:
             expectedTotals.get(1)[0] = 2;
             expectedTotals.get(1)[1] = 0;
-            expectedTotals.get(1)[2] = 9;
-            expectedTotals.get(1)[3] = 5;
-            expectedTotals.get(1)[4] = 4;
+            expectedTotals.get(1)[2] = 5;
+            expectedTotals.get(1)[3] = 9;
+            expectedTotals.get(1)[14] = 4;
             // dataLineThree:
             expectedTotals.get(2)[0] = 2;
             expectedTotals.get(2)[1] = 3;
-            expectedTotals.get(2)[2] = 1;
-            expectedTotals.get(2)[3] = 6;
-            expectedTotals.get(2)[4] = 8;
+            expectedTotals.get(2)[2] = 6;
+            expectedTotals.get(2)[3] = 1;
+            expectedTotals.get(2)[14] = 8;
         }
 
         // 2.
         HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, 0, NUMBER_OF_TESTLINES, NUMBER_OF_TEST_COLUMNS);
-        
+
         // 3.
         Method initTotals = HmpSumTask.class.getDeclaredMethod("initTotals");
         initTotals.setAccessible(true);
@@ -164,13 +163,11 @@ public class HmpSumTaskTest {
                 // Check that the correct number of entries were parsed for each dataLine:
                 () -> {
                     for (int i = 0; i < NUMBER_OF_TESTLINES; ++i) {
-                        assertEquals(expectedLineSum, (
-                            (hmpSumTask.getTotals()).get(i)[0]
-                            + (hmpSumTask.getTotals()).get(i)[1]
-                            + (hmpSumTask.getTotals()).get(i)[2]
-                            + (hmpSumTask.getTotals()).get(i)[3]
-                            + (hmpSumTask.getTotals()).get(i)[4]
-                        ));
+                        int sum = 0;
+                        for (int j = 0; j < NUMBER_OF_BASES; ++j) {
+                            sum += (hmpSumTask.getTotals()).get(i)[j];
+                        }
+                        assertEquals(expectedLineSum, sum);
                     }
                 }
             );

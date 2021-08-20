@@ -25,7 +25,7 @@ public class HmpToVcfTask implements Runnable {
     private final int endLine;
     private final int totalColumns;
     //private static final int HAPLOID_WIDTH = 1;
-    private static final int DIPLOID_WIDTH = 2;
+    private final int diploidWidth;
     //private static final int TRIPLOID_WIDTH = 3;
     private final int SIZE_OF_HMP_COLUMN = 3;
     private final String[] alleles; // A reference to the collected alleles array.
@@ -46,7 +46,7 @@ public class HmpToVcfTask implements Runnable {
      * @param outputLineHeaders   A reference to the prepared line headers for the hmp output file. The first entry also
      *                              contains the files' header in addition to the first entry's line header for ease.
      */
-    public HmpToVcfTask(String inputFilename, String outputFilename, int startLine, int endLine, int totalColumns, String[] alleles, String[] strandDirections, String[] outputLineHeaders) {
+    public HmpToVcfTask(String inputFilename, String outputFilename, int startLine, int endLine, int totalColumns, String[] alleles, String[] strandDirections, String[] outputLineHeaders, int ploidiness) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
         this.startLine = startLine;
@@ -55,6 +55,7 @@ public class HmpToVcfTask implements Runnable {
         this.alleles = alleles;
         this.strandDirections = strandDirections;
         this.lineHeaders = outputLineHeaders;
+        this.diploidWidth = ploidiness;
         this.partialResults = new String[totalColumns];
     }
 
@@ -83,7 +84,8 @@ public class HmpToVcfTask implements Runnable {
                     // Note: HMP files store character data while VCF stores an index that is relative to
                     //       its own record and possible SNPs.
                     String entry = "";
-                    for (int k = 0; k < DIPLOID_WIDTH; ++k) {
+                    for (int k = 0; k < diploidWidth; ++k) {
+                        // Column size is 3 but we only want the first two chars while dropping the trailing comma.
                         entry += FileController.intToChar(randomAccessFile.read());
                     }
                     accumulateResults(i, j, entry);
@@ -120,7 +122,18 @@ public class HmpToVcfTask implements Runnable {
             return;
         }
 
-        if (entry.length() == DIPLOID_WIDTH) { // == 2.
+
+        System.out.println("entry: [" + entry + "]");
+        if (entry.length() >= 1) {
+            for (int i = 0; i < entry.length(); ++i) {
+
+            }
+        }
+
+
+
+
+        if (entry.length() == diploidWidth) { // == 2.
             try {
                 String entryOne = "";
                 String entryTwo = "";
@@ -162,6 +175,8 @@ public class HmpToVcfTask implements Runnable {
                 partialResults[columnNumber] = "./."; // Two '.' characters for diploids, three for triploid, etc.
             }
         }
+
+
 
     }
 

@@ -103,10 +103,10 @@ public class PedSumTask implements Runnable {
                         case "C", "c":
                             ++(totals.get(k)[1]);
                             break;
-                        case "T", "t":
+                        case "G", "g":
                             ++(totals.get(k)[2]);
                             break;
-                        case "G", "g":
+                        case "T", "t":
                             ++(totals.get(k)[3]);
                             break;
                         default: // Unknowns.
@@ -128,10 +128,10 @@ public class PedSumTask implements Runnable {
                         case "C", "c":
                             ++(totals.get(k))[1];
                             break;
-                        case "T", "t":
+                        case "G", "g":
                             ++(totals.get(k))[2];
                             break;
-                        case "G", "g":
+                        case "T", "t":
                             ++(totals.get(k))[3];
                             break;
                         default: // Unknowns.

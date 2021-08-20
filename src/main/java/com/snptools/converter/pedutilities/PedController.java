@@ -182,8 +182,8 @@ public class PedController {
         Dictionary<Integer, String> dictionary = new Hashtable<Integer, String>();
         dictionary.put(0, "A");
         dictionary.put(1, "C");
-        dictionary.put(2, "T");
-        dictionary.put(3, "G");
+        dictionary.put(2, "G");
+        dictionary.put(3, "T");
         dictionary.put(4, "X");
         synchronized (totals) {
             for (int i = 0; i < inputColumnCount; ++i) {

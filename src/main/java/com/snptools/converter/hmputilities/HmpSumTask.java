@@ -23,7 +23,7 @@ public class HmpSumTask implements Runnable {
     private final int startLine;
     private final int endLine;
     private final int totalColumns;
-    private final int NUMBER_OF_BASES = 5; // Number of bases to create a sum for: ACTG0/X.
+    private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
     private final int COLUMN_WIDTH_HMP = 2; // Depends on ploidiness. Diploid=2.
 
     private List<int[]> totals = Collections.synchronizedList(new ArrayList<>()); // All access, including reading through .get(), must be in a synchronized block.
@@ -77,7 +77,9 @@ public class HmpSumTask implements Runnable {
             // 3.
             for (int i = 0; i < endLine - startLine; ++i) {
                 // 4.
-                accumulateTotals(i, reader.readLine());
+                String line = reader.readLine();
+                //System.out.println("Line: [" + line + "]");
+                accumulateTotals(i, line);
             }
         } catch (FileNotFoundException e) {
             System.out.println("There was an error finding a file in a HmpSumTask worker.");
@@ -118,43 +120,69 @@ public class HmpSumTask implements Runnable {
                     //System.out.println("Value: [" + value + "] ");
                     // Switch on the value to count frequency:
                     // 7.
-                    if (value.length() == COLUMN_WIDTH_HMP) { // == 2.
-                        switch (value.substring(0, 1)) {
-                            case "A", "a":
-                                ++(totals.get(lineNumber)[0]);
-                                break;
-                            case "C", "c":
-                                ++(totals.get(lineNumber)[1]);
-                                break;
-                            case "T", "t":
-                                ++(totals.get(lineNumber)[2]);
-                                break;
-                            case "G", "g":
-                                ++(totals.get(lineNumber)[3]);
-                                break;
-                            default: // Unknowns.
-                                ++(totals.get(lineNumber)[4]);
-                                //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                break;
+                    if (value.length() >= 1) {
+                        for (int i = 0; i < value.length(); ++i) {
+                            switch (value.substring(0 + i, 1 + i)) {
+                                case "A", "a":
+                                    ++(totals.get(lineNumber)[0]);
+                                    break;
+                                case "C", "c":
+                                    ++(totals.get(lineNumber)[1]);
+                                    break;
+                                case "G", "g":
+                                    ++(totals.get(lineNumber)[2]);
+                                    break;
+                                case "T", "t":
+                                    ++(totals.get(lineNumber)[3]);
+                                    break;
+    
+                                case "R", "r": // A or G
+                                    ++(totals.get(lineNumber)[4]);
+                                    break;
+                                case "Y", "y": // C or T
+                                    ++(totals.get(lineNumber)[5]);
+                                    break;
+                                case "S", "s": // G or C
+                                    ++(totals.get(lineNumber)[6]);
+                                    break;
+                                case "W", "w": // A or T
+                                    ++(totals.get(lineNumber)[7]);
+                                    break;
+                                case "K", "k": // G or T
+                                    ++(totals.get(lineNumber)[8]);
+                                    break;
+                                case "M", "m": // A or C
+                                    ++(totals.get(lineNumber)[9]);
+                                    break;
+    
+                                case "B", "b": // C or G or T
+                                    ++(totals.get(lineNumber)[10]);
+                                    break;
+                                case "D", "d": // A or G or T
+                                    ++(totals.get(lineNumber)[11]);
+                                    break;
+                                case "H", "h": // A or C or T
+                                    ++(totals.get(lineNumber)[12]);
+                                    break;
+                                case "V", "v": // A or C or G
+                                    ++(totals.get(lineNumber)[13]);
+                                    break;
+    
+                                case "N", "n": // Any base
+                                    ++(totals.get(lineNumber)[14]);
+                                    break;
+    
+                                case ".", "-": // Gap
+                                    ++(totals.get(lineNumber)[15]);
+                                    break;
+    
+                                default: // Unknowns
+                                    ++(totals.get(lineNumber)[16]);
+                                    //System.out.println("00, or unknown." + columnNumber + ". " + value);
+                                    break;
+                            }
                         }
-                        switch (value.substring(1, 2)) {
-                            case "A", "a":
-                                ++(totals.get(lineNumber)[0]);
-                                break;
-                            case "C", "c":
-                                ++(totals.get(lineNumber)[1]);
-                                break;
-                            case "T", "t":
-                                ++(totals.get(lineNumber)[2]);
-                                break;
-                            case "G", "g":
-                                ++(totals.get(lineNumber)[3]);
-                                break;
-                            default: // Unknowns.
-                                ++(totals.get(lineNumber)[4]);
-                                //System.out.println("00, or unknown." + columnNumber + ". " + value);
-                                break;
-                        }
+
                     } else { // Entry is an incorrect size:
                         System.out.println("Skipping input. Malformed hmp file - the size of an entry was unexpected.");
                         lineScanner.close();

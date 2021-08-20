@@ -261,11 +261,44 @@ public class FileController {
             case 71, 103: // 'G', 'g'
                 entry = 'G';
                 break;
-            case 78, 110: // 'N', 'n'
-                entry = 'N';
-                break;
             case 84, 116: // 'T', 't'
                 entry = 'T';
+                break;
+
+            case 82, 114: // 'R', 'r'
+                entry = 'R';
+                break;
+            case 89, 121: // 'Y', 'y'
+                entry = 'Y';
+                break;
+            case 83, 115: // 'S', 's'
+                entry = 'S';
+                break;
+            case 87, 119: // 'W', 'w'
+                entry = 'W';
+                break;
+            case 75, 107: // 'K', 'k'
+                entry = 'K';
+                break;
+            case 77, 109: // 'M', 'm'
+                entry = 'M';
+                break;
+
+            case 66, 98: // 'B', 'b'
+                entry = 'B';
+                break;
+            case 68, 100: // 'D', 'd'
+                entry = 'D';
+                break;
+            case 72, 104: // 'H', 'h'
+                entry = 'H';
+                break;
+            case 86, 118: // 'V', 'v'
+                entry = 'V';
+                break;
+
+            case 78, 110: // 'N', 'n'
+                entry = 'N';
                 break;
 
             case 124:

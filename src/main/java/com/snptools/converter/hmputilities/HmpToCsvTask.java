@@ -117,7 +117,7 @@ public class HmpToCsvTask implements Runnable {
         for (int k = 0; k < entry.length(); ++k) {
             String allele = entry.substring(0 + k, 1 + k);
             switch (allele) {
-                case "A", "C", "T", "G", "a", "c", "t", "g":
+                case "A", "C", "G", "T", "a", "c", "g", "t":
                     if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
                         ++result;
                     }

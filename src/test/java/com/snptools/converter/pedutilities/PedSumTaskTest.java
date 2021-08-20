@@ -118,8 +118,8 @@ public class PedSumTaskTest {
         //
         // A:      3    0    1    2    1    0    2    1    1    1
         // C:      2    2    1    2    2    0    3    0    2    1
-        // T:      0    3    1    1    1    2    0    2    1    1
         // G:      1    1    2    1    1    3    0    3    1    2
+        // T:      0    3    1    1    1    2    0    2    1    1
         // 0:      0    0    1    0    1    1    1    0    1    1
         //
         // Totals: 6    6    6    6    6    6    6    6    6    6
@@ -128,20 +128,20 @@ public class PedSumTaskTest {
         synchronized (expectedTotals) {
             expectedTotals.get(0)[0] = 3; // A
             expectedTotals.get(0)[1] = 2; // C
-            expectedTotals.get(0)[2] = 0; // T
-            expectedTotals.get(0)[3] = 1; // G
+            expectedTotals.get(0)[2] = 1; // G
+            expectedTotals.get(0)[3] = 0; // T
             expectedTotals.get(0)[4] = 0; // 0/X/N
 
             expectedTotals.get(1)[0] = 0;
             expectedTotals.get(1)[1] = 2;
-            expectedTotals.get(1)[2] = 3;
-            expectedTotals.get(1)[3] = 1;
+            expectedTotals.get(1)[2] = 1;
+            expectedTotals.get(1)[3] = 3;
             expectedTotals.get(1)[4] = 0;
 
             expectedTotals.get(2)[0] = 1;
             expectedTotals.get(2)[1] = 1;
-            expectedTotals.get(2)[2] = 1;
-            expectedTotals.get(2)[3] = 2;
+            expectedTotals.get(2)[2] = 2;
+            expectedTotals.get(2)[3] = 1;
             expectedTotals.get(2)[4] = 1;
 
             expectedTotals.get(3)[0] = 2;
@@ -158,8 +158,8 @@ public class PedSumTaskTest {
 
             expectedTotals.get(5)[0] = 0;
             expectedTotals.get(5)[1] = 0;
-            expectedTotals.get(5)[2] = 2;
-            expectedTotals.get(5)[3] = 3;
+            expectedTotals.get(5)[2] = 3;
+            expectedTotals.get(5)[3] = 2;
             expectedTotals.get(5)[4] = 1;
 
             expectedTotals.get(6)[0] = 2;
@@ -170,8 +170,8 @@ public class PedSumTaskTest {
 
             expectedTotals.get(7)[0] = 1;
             expectedTotals.get(7)[1] = 0;
-            expectedTotals.get(7)[2] = 2;
-            expectedTotals.get(7)[3] = 3;
+            expectedTotals.get(7)[2] = 3;
+            expectedTotals.get(7)[3] = 2;
             expectedTotals.get(7)[4] = 0;
 
             expectedTotals.get(8)[0] = 1;
@@ -182,8 +182,8 @@ public class PedSumTaskTest {
 
             expectedTotals.get(9)[0] = 1;
             expectedTotals.get(9)[1] = 1;
-            expectedTotals.get(9)[2] = 1;
-            expectedTotals.get(9)[3] = 2;
+            expectedTotals.get(9)[2] = 2;
+            expectedTotals.get(9)[3] = 1;
             expectedTotals.get(9)[4] = 1;
         }
 

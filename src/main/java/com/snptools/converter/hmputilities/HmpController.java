@@ -29,6 +29,9 @@ public class HmpController {
     private final String TEMP_FILE_NAME = "TEMP"; // File name appendix for stage 1.
     private final String TEMP_FILE_NAME_2ND = "TEMP_2ND"; // File name appendix for stage 2.
     private final int NUMBER_OF_WORKERS = 4; // The number of worker threads to create.
+    private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
+    //private int EXPECTED_COLUMN_WIDTH_HMP = 1; // Column width: the number of chars in an entry
+    private int hmpPloidiness = 0; // The number of characters in the HMP file's data entries.
 
     private int totalInputLines = 0; // The total number of lines in the file including the header.
     private int NUMBER_OF_HEADER_LINES = 1; // The size of the file header.
@@ -71,6 +74,13 @@ public class HmpController {
             return;
         }
 
+        hmpPloidiness = determinePloidiness();
+        // Simple integrity check:
+        if (hmpPloidiness <= 0) {
+            System.out.println("\nThe ploidiness of the file could not be determined. Please make sure the hmp file is valid.\n");
+            return;
+        }
+
         normalizeInputThreaded(NUMBER_OF_WORKERS);
 
         String intermediateFile = outputFileName + TEMP_FILE_NAME;
@@ -109,6 +119,13 @@ public class HmpController {
         // Simple integrity check: Check if ids were collected, otherwise return
         if (sampleIds == null || (sampleIds.length != (totalInputColumns - NUMBER_OF_HEADER_COLUMNS))) {
             System.out.println("\nSample ids could not be detected. Please make sure the hmp file is well formed and that the number of records matches the number of ids.\n");
+            return;
+        }
+
+        hmpPloidiness = determinePloidiness();
+        // Simple integrity check:
+        if (hmpPloidiness <= 0) {
+            System.out.println("\nThe ploidiness of the file could not be determined. Please make sure the hmp file is valid.\n");
             return;
         }
 
@@ -285,6 +302,51 @@ public class HmpController {
         }
     }
 
+    /**
+     * Determines the level of ploidiness of the provided file by navigating to the first
+     * data entry and returning entry.length().
+     * Returns 0 on any error.
+     * 
+     * @return  The ploidiness of the file, simply the length of the data entry string.
+     */
+    private int determinePloidiness() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(hmpFileName))) {
+            int ploidiness = 0;
+            for (int i = 0; i < NUMBER_OF_HEADER_LINES; ++i) { reader.readLine(); } // Skip ahead.
+            String line = reader.readLine();
+            if (line != null) {
+                Scanner lineScanner = new Scanner(line);
+                for (int j = 0; j < NUMBER_OF_HEADER_COLUMNS; ++j) { // Skip line header
+                    if (lineScanner.hasNext()) {
+                        lineScanner.next();
+                    } else {
+                        lineScanner.close();
+                        return 0;
+                    }
+                }
+                // Assuming there is at least one data column following the line header:
+                if (lineScanner.hasNext()) {
+                    String dataEntry =  lineScanner.next();
+                    ploidiness = dataEntry.length();
+                    lineScanner.close();
+                    return ploidiness;
+                } else {
+                    lineScanner.close();
+                    System.out.println("A data entry could not be found.");
+                    return 0;
+                }
+            } // else, the line was null.
+            return 0;
+        } catch (FileNotFoundException e) {
+            System.out.println("The input file could not be found.");
+            e.printStackTrace();
+            return 0;
+        } catch (IOException e) {
+            System.out.println("There was an IO error checking the input file.");
+            e.printStackTrace();
+            return 0;
+        }
+    }
 
     /**
      * Normalizes the data input file for uniform processing and file navigation and improved performance.
@@ -311,7 +373,7 @@ public class HmpController {
                     ((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers) + NUMBER_OF_HEADER_LINES,
                     NUMBER_OF_HEADER_COLUMNS,
                     totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                    2 // Column width: the number of chars.
+                    hmpPloidiness // Column width: the number of chars.
                 );
                 threadPool[i] = new Thread(normalizePool[i]);
                 threadPool[i].start();
@@ -398,7 +460,8 @@ public class HmpController {
                     totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
                     allAllelesValues,
                     strandDirections,
-                    outputLineHeaders
+                    outputLineHeaders,
+                    hmpPloidiness
                 );
                 threadPool[i] = new Thread(resultsPool[i]);
                 threadPool[i].start();
@@ -426,13 +489,13 @@ public class HmpController {
     private void mergeThreadTotals() {
         synchronized (totals) {
             for (int k = 0; k < sumPool.length; ++ k) { // 4.
-                for (int i = 0; i < sumPool[k].getTotals().size(); ++i) { // 773/774.
+                for (int i = 0; i < sumPool[k].getTotals().size(); ++i) {
                     int sum = 0;
-                    for (int j = 0; j < sumPool[k].getTotals().get(i).length; ++j) { // 5.
+                    for (int j = 0; j < sumPool[k].getTotals().get(i).length; ++j) { // 17.
                         sum += sumPool[k].getTotals().get(i)[j];
                         totals.get(k * (totalInputLines - NUMBER_OF_HEADER_LINES) / sumPool.length + i)[j] += sumPool[k].getTotals().get(i)[j];
                     }
-                    if (sum != 2 * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS)) {
+                    if (sum != hmpPloidiness * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS)) {
                         System.out.println("Invalid sum. Results are not accurate: " + sum);
                     }
                 }
@@ -440,15 +503,15 @@ public class HmpController {
             }
         }
     }
-    
+
     /**
      * Initializes and fills the totals datastructure with default data for further transformation.
      */
     private void initTotals() {
         // Populate the totals of arrays to store counts of ACTG0.
         synchronized (totals) {
-            for (int i = 0; i < totalInputLines - NUMBER_OF_HEADER_LINES; ++i) { // 3093.
-                totals.add(i, new int[5]);
+            for (int i = 0; i < totalInputLines - NUMBER_OF_HEADER_LINES; ++i) {
+                totals.add(i, new int[NUMBER_OF_BASES]);
             }
         }
     }
@@ -463,14 +526,30 @@ public class HmpController {
         Dictionary<Integer, String> dictionary = new Hashtable<Integer, String>();
         dictionary.put(0, "A");
         dictionary.put(1, "C");
-        dictionary.put(2, "T");
-        dictionary.put(3, "G");
-        dictionary.put(4, "X");
+        dictionary.put(2, "G");
+        dictionary.put(3, "T");
+
+        dictionary.put(4, "R");
+        dictionary.put(5, "Y");
+        dictionary.put(6, "S");
+        dictionary.put(7, "W");
+        dictionary.put(8, "K");
+        dictionary.put(9, "M");
+
+        dictionary.put(10, "B");
+        dictionary.put(11, "D");
+        dictionary.put(12, "H");
+        dictionary.put(13, "V");
+
+        dictionary.put(14, "N");
+        dictionary.put(15, "."); // Also includes "-" but we will output as "." only.
+        dictionary.put(16, "X");
+
         synchronized (totals) {
             for (int i = 0; i < totalInputLines - NUMBER_OF_HEADER_LINES; ++i) {
                 int max = totals.get(i)[0]; // Initialize the first value as the current most frequent.
                 int index = 0;
-                for (int j = 0; j < 4; ++j) {
+                for (int j = 0; j < NUMBER_OF_BASES; ++j) {
                     int value = totals.get(i)[j];
                     if (max < value) {
                         max = value;
@@ -494,9 +573,24 @@ public class HmpController {
         Dictionary<Integer, String> dictionary = new Hashtable<Integer, String>(); // Used for easy mapping below.
         dictionary.put(0, "A");
         dictionary.put(1, "C");
-        dictionary.put(2, "T");
-        dictionary.put(3, "G");
-        dictionary.put(4, "X");
+        dictionary.put(2, "G");
+        dictionary.put(3, "T");
+
+        dictionary.put(4, "R");
+        dictionary.put(5, "Y");
+        dictionary.put(6, "S");
+        dictionary.put(7, "W");
+        dictionary.put(8, "K");
+        dictionary.put(9, "M");
+
+        dictionary.put(10, "B");
+        dictionary.put(11, "D");
+        dictionary.put(12, "H");
+        dictionary.put(13, "V");
+
+        dictionary.put(14, "N");
+        dictionary.put(15, "."); // Also includes "-" but we will output as "." only.
+        dictionary.put(16, "X");
         /* 
             Get array entry from totals listing frequencies (index indicates the value ie. "ACTGX")
             Add those entries with ACTGX values to the treemap - they become naturally sorted
@@ -507,7 +601,7 @@ public class HmpController {
         synchronized (totals) {
             for (int i = 0; i < totalInputLines - NUMBER_OF_HEADER_LINES; ++i) {
                 Map<Integer, String> treeMap = new TreeMap<Integer, String>();
-                for (int j = 0; j < 4; ++j) {
+                for (int j = 0; j < NUMBER_OF_BASES; ++j) {
                     int freq = totals.get(i)[j];
                     if (treeMap.containsKey(freq)) {
                         String temp = treeMap.get(freq);

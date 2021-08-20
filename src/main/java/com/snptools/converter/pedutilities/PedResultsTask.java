@@ -119,7 +119,7 @@ public class PedResultsTask implements Runnable {
             if (lineScanner.hasNext()) {
                 value = lineScanner.next();
                 switch (value) {
-                    case "A", "C", "T", "G", "a", "c", "t", "g":
+                    case "A", "C", "G", "T", "a", "c", "g", "t":
                         if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
                             ++result;
                         }
@@ -137,7 +137,7 @@ public class PedResultsTask implements Runnable {
             if (lineScanner.hasNext()) {
                 value = lineScanner.next();
                 switch (value) {
-                    case "A", "C", "T", "G", "a", "c", "t", "g":
+                    case "A", "C", "G", "T", "a", "c", "g", "t":
                         if (!value.equalsIgnoreCase(majorAllelesValues[k])) {
                             ++result;
                         }
