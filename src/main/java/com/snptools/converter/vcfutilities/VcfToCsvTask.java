@@ -30,7 +30,7 @@ public class VcfToCsvTask implements Runnable {
     private static final int DIPLOID_WIDTH = 3; // The number of characters wide including the inner separator.
     //private static final int TRIPLOID_WIDTH = 5;
     private final int NO_DATA_DIPLOID_IN_CSV = 5; // CSV format uses 5 for two missing data points in diploids.
-    private static final int SIZE_OF_VCF_COLUMN = 4;
+    private static final long SIZE_OF_VCF_COLUMN = 4;
     private int[] partialResults;
 
     /**
@@ -70,7 +70,8 @@ public class VcfToCsvTask implements Runnable {
             // go to start.
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
-                    randomAccessFile.seek(j * totalColumns * SIZE_OF_VCF_COLUMN + i * SIZE_OF_VCF_COLUMN); // Iterate through column.
+                    final long position = (j * totalColumns * SIZE_OF_VCF_COLUMN) + (i * SIZE_OF_VCF_COLUMN);
+                    randomAccessFile.seek(position); // Iterate through column.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) {
                         entry += FileController.intToChar(randomAccessFile.read());

@@ -27,7 +27,7 @@ public class VcfToHmpTask implements Runnable {
     private static final String NO_DATA_DIPLOID = "NN"; // HMP representation of missing/unknown data for diploid cells. Two 'N' characters for diploids, three for triploid, etc.
     //private static final int HAPLOID_WIDTH = 1;
     private static final int DIPLOID_WIDTH = 3;
-    private static final int SIZE_OF_VCF_COLUMN = 4;
+    private static final long SIZE_OF_VCF_COLUMN = 4;
     //private static final int TRIPLOID_WIDTH = 5;
     private String[] partialResults; // A line buffer containing accumulated results.
     private final String[] alleles; // A reference to the collected alleles array.
@@ -74,7 +74,8 @@ public class VcfToHmpTask implements Runnable {
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
                     //randomAccessFile.seek(line + offset);
-                    randomAccessFile.seek(i * totalColumns * SIZE_OF_VCF_COLUMN + j * SIZE_OF_VCF_COLUMN); // Iterate through line.
+                    final long position = (i * totalColumns * SIZE_OF_VCF_COLUMN) + (j * SIZE_OF_VCF_COLUMN);
+                    randomAccessFile.seek(position); // Iterate through line.
                     String entry = "";
                     for (int k = 0; k < DIPLOID_WIDTH; ++k) { // == 3.
                         entry += FileController.intToChar(randomAccessFile.read());

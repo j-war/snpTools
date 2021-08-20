@@ -70,7 +70,8 @@ public class HmpToCsvTask implements Runnable {
         ) {
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
-                    randomAccessFile.seek(j * totalColumns * (ploidWidth + 1) + i * (ploidWidth + 1)); // Move pointer into position.
+                    final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
+                    randomAccessFile.seek(position); // Move pointer into position.
                     /* Convert intermediate value to allele:
                         * The RandomAccessFile.read() function returns bytes:
                         * convert bytes to char, then interpet the string.

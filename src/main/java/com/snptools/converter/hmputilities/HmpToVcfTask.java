@@ -76,7 +76,8 @@ public class HmpToVcfTask implements Runnable {
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
                     // randomAccessFile.seek(line + offset);
-                    randomAccessFile.seek(i * totalColumns * (ploidWidth + 1) + j * (ploidWidth + 1)); // Move to starting position.
+                    final long position = (i * totalColumns * (ploidWidth + 1L)) + j * (ploidWidth + 1L);
+                    randomAccessFile.seek(position); // Move to starting position.
                     // Read an entry from the normalized file and then compare and optionally correct
                     // for the strand direction.
                     // The comparison is between the collected CSV string and the individual alleles
