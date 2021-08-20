@@ -25,7 +25,7 @@ public class HmpToVcfTask implements Runnable {
     private final int endLine;
     private final int totalColumns;
     //private static final int HAPLOID_WIDTH = 1;
-    private final int diploidWidth;
+    private final int ploidWidth;
     //private static final int TRIPLOID_WIDTH = 3;
     private final int SIZE_OF_HMP_COLUMN = 3;
     private final String[] alleles; // A reference to the collected alleles array.
@@ -55,7 +55,7 @@ public class HmpToVcfTask implements Runnable {
         this.alleles = alleles;
         this.strandDirections = strandDirections;
         this.lineHeaders = outputLineHeaders;
-        this.diploidWidth = ploidiness;
+        this.ploidWidth = ploidiness;
         this.partialResults = new String[totalColumns];
     }
 
@@ -76,7 +76,7 @@ public class HmpToVcfTask implements Runnable {
             for (int i = startLine; i < endLine; ++i) {
                 for (int j = 0; j < totalColumns; ++j) {
                     // randomAccessFile.seek(line + offset);
-                    randomAccessFile.seek(i * totalColumns * SIZE_OF_HMP_COLUMN + j * SIZE_OF_HMP_COLUMN); // Move to starting position.
+                    randomAccessFile.seek(i * totalColumns * (ploidWidth + 1) + j * (ploidWidth + 1)); // Move to starting position.
                     // Read an entry from the normalized file and then compare and optionally correct
                     // for the strand direction.
                     // The comparison is between the collected CSV string and the individual alleles
@@ -84,8 +84,8 @@ public class HmpToVcfTask implements Runnable {
                     // Note: HMP files store character data while VCF stores an index that is relative to
                     //       its own record and possible SNPs.
                     String entry = "";
-                    for (int k = 0; k < diploidWidth; ++k) {
-                        // Column size is 3 but we only want the first two chars while dropping the trailing comma.
+                    for (int k = 0; k < ploidWidth; ++k) {
+                        // Column size is X+1 but we only want the first X chars while dropping the trailing comma.
                         entry += FileController.intToChar(randomAccessFile.read());
                     }
                     accumulateResults(i, j, entry);
@@ -122,18 +122,47 @@ public class HmpToVcfTask implements Runnable {
             return;
         }
 
+        // get entry + ploidiness
+        // parse ploidWidth-number of entries from entry into String[] of size = ploidWidth
+        //     order into the array is based on strand value
+        //
+        // Split alleles into String[] values
+        // Iterate through values array
+        // Convert parsed entries into integers based on index of values array
+        // 
+        // do a final check that it's not "." and construct the result.
 
-        System.out.println("entry: [" + entry + "]");
-        if (entry.length() >= 1) {
-            for (int i = 0; i < entry.length(); ++i) {
+        if (ploidWidth == 1) {
+            //System.out.println("entry: [" + entry + "]");
+            try {
+                String entryOne = "" + entry;
 
+                String entryOneResult = ".";
+                String result = "";
+
+                String[] values = alleles[lineNumber].split(",");
+
+                // System.out.println("entry: [" + entry + "]");
+                for (int k = 0; k < values.length; ++k) { // Convert entry to index into the collected values:
+                    // System.out.println("Values-entry: [" + entry + "][" + k + "]");
+                    if (entryOne.compareToIgnoreCase(values[k]) == 0) {
+                        entryOneResult = "" + k;
+                    }
+                }
+                // If the entry was not found in the previously collected alleles array, assign a blank value:
+                if (entryOne.compareToIgnoreCase(".") == 0) {
+                    result = ".";
+                } else {
+                    result = entryOneResult;
+                }
+                partialResults[columnNumber] = result;
+            } catch (IndexOutOfBoundsException e) {
+                System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
+                // Likely a malformed file or programming logical error:
+                partialResults[columnNumber] = ".";
             }
-        }
 
-
-
-
-        if (entry.length() == diploidWidth) { // == 2.
+        } else if (ploidWidth == 2) {
             try {
                 String entryOne = "";
                 String entryTwo = "";
