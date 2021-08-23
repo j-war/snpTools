@@ -70,6 +70,7 @@ public class HmpToCsvTaskTest {
         // 1.
         final int NUMBER_OF_TEST_COLUMNS = 10; // The number of HMP entries in the dataLines below.
         final int NUMBER_OF_TESTLINES = 3;
+        final int PLOIDINESS = 2;
 
         final String[] dataLineOne = new String[]{"aa", "CC", "TT", "gG", "AC", "TG", "CT", "GT", "NN", "TT"};
         final String[] dataLineTwo = new String[]{"NN", "GT", "GG", "TT", "AA", "TT", "Gt", "TT", "NN", "TG"};
@@ -82,7 +83,7 @@ public class HmpToCsvTaskTest {
         final int[][] expectedResults = new int[][]{expectedResultsOne, expectedResultsTwo, expectedResultsThree};
 
         // 2.
-        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, 2);
+        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, PLOIDINESS);
 
         // 3a.
         Method accumulateResultsMethod = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
@@ -90,7 +91,7 @@ public class HmpToCsvTaskTest {
 
         // 3b. Loop over assertions with test data:
         for (int j = 0; j < NUMBER_OF_TESTLINES; ++j) {
-            final int jCopy = j; // Make a final copy for use inside lambda below.
+            final int jCopy = j; // Make and use the final copy for use inside lambda below.
             // 3b.
             for (int i = 0; i < NUMBER_OF_TEST_COLUMNS; ++i) {
                 accumulateResultsMethod.invoke(hmpToCsvTask, i, dataLines[jCopy][i]);
@@ -116,6 +117,39 @@ public class HmpToCsvTaskTest {
                 }
             );
         }
+
+        // Ploidiness = 1:
+        // 1.
+        final String[] dataLineFour = new String[]{"C", "C", "n", "0", "N", "A", "A", "G", "T", "N"};
+                                    // majors --> {"A", "A", "C", "C", "T", "T", "G", "G", "A", "C"}
+        final int[] expectedResultsFour = new int[]{1,   1,   1,   4,   1,   1,   1,   0,   1,   1};
+        // 2.
+        HmpToCsvTask hmpToCsvTaskTwo = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, 1);
+        // 3a.
+        Method accumulateResultsMethodTwo = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
+        accumulateResultsMethodTwo.setAccessible(true);
+        // 3b.
+        for (int i = 0; i < NUMBER_OF_TEST_COLUMNS; ++i) {
+            accumulateResultsMethodTwo.invoke(hmpToCsvTaskTwo, i, dataLineFour[i]);
+        }
+        // 4.
+        Field partialResultsTwo = hmpToCsvTaskTwo.getClass().getDeclaredField("partialResults");
+        partialResultsTwo.setAccessible(true);
+        int[] testResultsTwo = (int[]) partialResultsTwo.get(hmpToCsvTaskTwo);
+
+        // 5.
+        Assertions.assertAll(
+            () -> assertTrue(expectedResultsFour.length > 0),
+            () -> assertTrue(testResultsTwo.length == NUMBER_OF_TEST_COLUMNS),
+            () -> assertEquals(expectedResultsFour.length, testResultsTwo.length),
+            () -> {
+                for (int i = 0; i < expectedResultsFour.length; ++i) {
+                    //System.out.println("Expected:[" + expectedResultsFour[i] + "] test:[" + testResultsTwo[i] + "]:" + i);
+                    assertEquals(expectedResultsFour[i], testResultsTwo[i]);
+                }
+            }
+        );
+
     }
 
 }

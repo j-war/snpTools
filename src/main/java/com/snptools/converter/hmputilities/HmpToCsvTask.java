@@ -21,7 +21,7 @@ import com.snptools.converter.fileutilities.FileController;
 public class HmpToCsvTask implements Runnable {
 
     private final int SIZE_OF_COLUMN = 3; // Including the comma: Example: "AA," is the column including the comma seperator.
-    private final int ploidWidth;
+    private final int ploidWidth;   // The width of the data entries representing the ploidiness of the data.
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
@@ -41,7 +41,6 @@ public class HmpToCsvTask implements Runnable {
      * The startColumn and endColumn arguments are used for file pointer positioning while the
      * totalColumns and totalLines arguments are used for transposing and transforming the data.
      * 
-     *
      * @param inputFilename The input file path and file name and an extension for processing.
      * @param outputFilename    The  The output file path and file name with an extension for processing.
      * @param startColumn   The column for this worker to start at.
@@ -49,6 +48,7 @@ public class HmpToCsvTask implements Runnable {
      * @param totalColumns  The number of columns this worker should process.
      * @param totalLines    The total number of lines to process.
      * @param majorAllelesValues    A reference to the previously calculated major allleles.
+     * @param ploidiness    The width of the data entries representing the ploidiness of the data.
      */
     public HmpToCsvTask(String inputFilename, String outputFilename, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int ploidiness) {
         this.inputFilename = inputFilename;
