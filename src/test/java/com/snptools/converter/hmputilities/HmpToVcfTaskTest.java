@@ -1,0 +1,203 @@
+package com.snptools.converter.hmputilities;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * A set of unit tests for HmpToVcfTask.
+ * 
+ * @author  Jeff Warner
+ * @version 1.0, August 2021
+ */
+public class HmpToVcfTaskTest {
+
+    final String TEST_INPUT_HMP = "./src/test/resources/testHalfNormal.hmp";
+    final String TEST_OUTPUT_HMP = "./src/test/resources/testHmp.vcf";
+
+    final int START_LINE_HMP = 1;
+    final int END_LINE_HMP = 6;
+
+    final int TOTAL_LINES = END_LINE_HMP - START_LINE_HMP;
+    final int COLUMN_PAIRS = 281; // is equal to half the number of data columns.
+
+    final int START_COLUMN = 9; // Where this worker should start - GT column present. // double check this
+    final int END_COLUMN = 290; // Where this worker should end.
+    final int NUMBER_OF_COLUMNS = END_COLUMN - START_COLUMN; // The number of columns that should be kept by this worker.
+    final int COLUMN_WIDTH = 2; // <--- Depends on ploidiness. Diploid=2.
+
+    final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
+
+    final String[] majorAlleles = new String[]{"A,C,T,G"};//, "A,C", "C,T", "C,G", "T,A,C,N,G"}; //, "T,A,G", "G,T", "G,A", "A,C,T,G,N", "C,G,T"};
+    final String[] strandDirections = new String[]{"+"};//, "+", "+", "+", "+"}; //, "+", "+", "+", "+", "+"};
+    final String[] outputLineHeaders = new String[]{};
+
+    /**
+     * Tests whether the HmpToVcfTask worker was created successfully.
+     */
+    @Test
+    @DisplayName("shouldConstructHmpToVcfTask")
+    public void shouldConstructHmpToVcfTask() {
+        /* HmpToVcfTask()
+        String inputFilename
+        String outputFilename
+        int startLine
+        int endLine
+        int totalColumns
+        String[] alleles
+        String[] strandDirections
+        String[] outputLineHeaders
+        */
+        HmpToVcfTask hmpToVcfTask = new HmpToVcfTask(
+            TEST_INPUT_HMP, TEST_OUTPUT_HMP,
+            START_LINE_HMP, END_LINE_HMP, NUMBER_OF_COLUMNS,
+            majorAlleles, strandDirections, outputLineHeaders, 1);
+        assertNotNull(hmpToVcfTask);
+    }
+
+    /**
+     * Tests whether an array of entries from the input file is correctly parsed and
+     * interpreted.
+     *
+     * Note: This test uses reflection to selectively call private methods and to
+     *       read private fields.
+     */
+    @Test
+    @DisplayName("shouldAccumulateResults")
+    public void shouldAccumulateResults() throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchFieldException {
+
+        // 1. Prepare an array of entries and expectedResults.
+        //     - test data should be normalized.
+        // 2. Create an HmpToVcfTask worker.
+        // 3. Loop on accumulate accumulateTotals() with prepared data.
+        // 4. Use reflection to copy partialResults to testResults.
+        // 5. Loop and compare expected and actual.
+
+        // 1.
+        final int NUMBER_OF_TEST_COLUMNS = 10; // The number of HMP entries in the dataLines below.
+        final int NUMBER_OF_TEST_LINES = 5;
+        final int PLOIDINESS = 2;
+                                // {"A,C,T,G", "A,C", "C,T", "C,G", "T,A,C,N,G"}
+        final String[] dataLineOne = new String[]{"aa",  "CC",  "TT",  "gG",  "AT",  "TG",  "GT",  "GA",  "NN",  "TT"};// "A,C,T,G"
+        final String[] expectedResultsOne = new String[]{"0/0", "1/1", "2/2", "3/3", "0/2", "2/3", "3/2", "3/0", "./.", "2/2"};
+        final String[] dataLineTwo = new String[]{"TT", "CC", "TT", "CC", "AA", "TT", "Gt", "AA", "NN", "TG"}; // "A,C"
+        final String[] dataLineThree = new String[]{"CG", "AC", "CC", "GC", "AA", "GA", "GT", "GA", "GT", "TC"}; // "C,T"
+        final String[] dataLineFour = new String[]{"TT", "CC", "TT", "CC", "AA", "TT", "Gt", "AA", "NN", "TG"}; // "C,G"
+        final String[] dataLineFive = new String[]{"CG", "AC", "CC", "GC", "AA", "GA", "GT", "GA", "GT", "TC"}; // "T,A,C,N,G"
+        //final String[][] dataLines = new String[][]{dataLineOne, dataLineTwo, dataLineThree, dataLineFour, dataLineFive};
+
+        final String[] expectedResultsTwo = new String[]{"2/2", "1/1", "1/1", "0/0", "1/1", "0/0", "1/1", "1/1", "4/4", "2/1"};
+        final String[] expectedResultsThree = new String[]{"1/4", "0/1", "0/0", "0/1", "0/0", "2/1", "0/1", "0/1", "3/2", "2/0"};
+        final String[] expectedResultsFour = new String[]{"2/2", "1/1", "1/1", "0/0", "1/1", "0/0", "1/1", "1/1", "4/4", "2/1"};
+        final String[] expectedResultsFive = new String[]{"1/4", "0/1", "0/0", "0/1", "0/0", "2/1", "0/1", "0/1", "3/2", "2/0"};
+        //final String[][] expectedResults = new String[][]{expectedResultsOne, expectedResultsTwo, expectedResultsThree, expectedResultsFour, expectedResultsFive};
+
+        // 2.
+        HmpToVcfTask hmpToVcfTask = new HmpToVcfTask(
+            TEST_INPUT_HMP,
+            TEST_OUTPUT_HMP,
+            START_LINE_HMP,
+            END_LINE_HMP,
+            NUMBER_OF_TEST_COLUMNS,
+            majorAlleles,
+            strandDirections,
+            outputLineHeaders,
+            PLOIDINESS
+        );
+
+        // 3a.
+        Method accumulateResultsMethodOne = HmpToVcfTask.class.getDeclaredMethod("accumulateResults", int.class, int.class, String.class);
+        accumulateResultsMethodOne.setAccessible(true);
+
+        // 3b. Loop over assertions with test data:
+        //for (int i = 0; i < NUMBER_OF_TEST_LINES; ++i) {
+            //final int iCopy = i; // Make and use the final copy for use inside lambda below.
+            // 3b.
+            for (int j = 0; j < dataLineOne.length; ++j) {//NUMBER_OF_TEST_COLUMNS
+                //accumulateResultsMethod.invoke(hmpToVcfTask, i, j, dataLines[iCopy][j]);
+                accumulateResultsMethodOne.invoke(hmpToVcfTask, 0, j, dataLineOne[j]);
+            }
+        //}
+            // 4.
+            Field partialResults = hmpToVcfTask.getClass().getDeclaredField("partialResults");
+            partialResults.setAccessible(true);
+            String[] testResultsOne = (String[]) partialResults.get(hmpToVcfTask);
+
+            //for (int k = 0; k < 10; ++k) {
+            //    System.out.println("D:[" + dataLineOne[k] + "]M:[" + majorAlleles[0] + "]");
+            //    System.out.println("E:[" + expectedResultsOne[k] + "]T:[" + testResultsOne[k] + "]");
+                //assertEquals(expectedResultsOne[k], testResultsOne[k]); }
+
+            // 5.
+            // Check that results were obtained
+            // Check that the expected number of results were obtained
+            // Check that the interpretation of input entries was correct
+            Assertions.assertAll(
+                () -> assertTrue(expectedResultsOne.length > 0),
+                () -> assertTrue(testResultsOne.length == NUMBER_OF_TEST_COLUMNS),
+                () -> assertEquals(expectedResultsOne.length, testResultsOne.length),
+                () -> {
+                    for (int j = 0; j < expectedResultsOne.length; ++j) {
+                        //assertEquals((expectedResults[iCopy])[j], testResults[j]);
+                        System.out.println(j + " :E:[" + expectedResultsOne[j] + "]T:[" + testResultsOne[j] + "]");
+                        assertEquals(expectedResultsOne[j], testResultsOne[j]);
+                    }
+                }
+            );
+        //}
+
+        // Ploidiness = 1:
+        // 1.
+        //final String[] dataLineFour = new String[]{"C", "C", "n", "0", "N", "A", "A", "G", "T", "N"};
+                                    // majors --> {"A", "A", "C", "C", "T", "T", "G", "G", "A", "C"}
+        //final int[] expectedResultsFour = new int[]{1,   1,   1,   4,   1,   1,   1,   0,   1,   1};
+        // 2.
+/*
+        HmpToVcfTask hmpToVcfTaskTwo = new HmpToVcfTask(
+            TEST_INPUT_HMP,
+            TEST_OUTPUT_HMP,
+            START_LINE_HMP,
+            END_LINE_HMP,
+            NUMBER_OF_TEST_COLUMNS,
+            majorAlleles,
+            strandDirections,
+            outputLineHeaders,
+            1
+        );
+
+        // 3a.
+        Method accumulateResultsMethodTwo = HmpToVcfTask.class.getDeclaredMethod("accumulateResults", int.class, int.class, String.class);
+        accumulateResultsMethodTwo.setAccessible(true);
+        // 3b.
+        for (int i = 0; i < NUMBER_OF_TEST_COLUMNS; ++i) {
+            accumulateResultsMethodTwo.invoke(hmpToVcfTaskTwo, 0, i, dataLineFour[i]);
+        }
+        // 4.
+        Field partialResultsTwo = hmpToVcfTaskTwo.getClass().getDeclaredField("partialResults");
+        partialResultsTwo.setAccessible(true);
+        String[] testResultsTwo = (String[]) partialResultsTwo.get(hmpToVcfTaskTwo);
+*/
+        // 5.
+        /*
+        Assertions.assertAll(
+            () -> assertTrue(expectedResultsFour.length > 0),
+            () -> assertTrue(testResultsTwo.length == NUMBER_OF_TEST_COLUMNS),
+            () -> assertEquals(expectedResultsFour.length, testResultsTwo.length),
+            () -> {
+                for (int i = 0; i < expectedResultsFour.length; ++i) {
+                    //System.out.println("Expected:[" + expectedResultsFour[i] + "] test:[" + testResultsTwo[i] + "]:" + i);
+                    assertEquals(expectedResultsFour[i], testResultsTwo[i]);
+                }
+            }
+        );*/
+
+    }
+}

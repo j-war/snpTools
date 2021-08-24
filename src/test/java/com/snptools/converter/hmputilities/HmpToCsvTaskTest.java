@@ -35,7 +35,6 @@ public class HmpToCsvTaskTest {
     final int COLUMN_WIDTH = 2; // <--- Depends on ploidiness. Diploid=2.
 
     final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
-    final int NUMBER_OF_BASES = 5; // ACTG0
 
     final String[] majorAlleles = new String[]{"A", "A", "C", "C", "T", "T", "G", "G", "A", "C"};
 

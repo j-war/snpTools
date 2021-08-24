@@ -43,8 +43,10 @@ public class HmpToVcfTask implements Runnable {
      * @param endLine The column for this worker to finish at.
      * @param totalColumns  The number of columns this worker should process.
      * @param alleles   A reference to the alleles array containing entries of csv-strings of the majors and alt/references.
+     * @param strandDirections  A reference to the strand directions array for hmp records and used for direction correction.
      * @param outputLineHeaders   A reference to the prepared line headers for the hmp output file. The first entry also
-     *                              contains the files' header in addition to the first entry's line header for ease.
+     *                            contains the files' header in addition to the first entry's line header for ease.
+     * @param ploidiness    The width of the data entries representing the ploidiness of the data.
      */
     public HmpToVcfTask(String inputFilename, String outputFilename, int startLine, int endLine, int totalColumns, String[] alleles, String[] strandDirections, String[] outputLineHeaders, int ploidiness) {
         this.inputFilename = inputFilename;
@@ -134,35 +136,40 @@ public class HmpToVcfTask implements Runnable {
         // do a final check that it's not "." and construct the result.
 
         try {
+            // Parse the entries in order based on the strand direction:
             String parsedEntries[] = new String[ploidWidth];
             // Check the strand direction:
             if (strandDirections[lineNumber].equalsIgnoreCase("+")) { // if strand == +, then iterate from end to start
-                for (int i = entry.length(); i > 0; --i) {
-                    parsedEntries[Math.abs(i - entry.length())] = "" + entry.substring(i - 1, i);
-                }
-            } else { // else strand == -, and then iterate from start to end.
+                System.out.println("positive");
                 for (int i = 0; i < entry.length(); ++i) {
-                    parsedEntries[i] = "" + entry.substring(0 + i, 1 + i);
+                    parsedEntries[i] = "" + entry.substring(i, 1 + i);
+                }
+            } else { // else if strand == -, and then iterate from start to end.
+                System.out.println("negative");
+                for (int i = 0; i < entry.length(); ++i) {
+                    parsedEntries[Math.abs(i - (entry.length() - 1))] = "" + entry.substring(i, i + 1);
                 }
             }
 
-
+            // Compare parsedEntries[] to values[] to determine index, append index to result variable: parsedEntriesIndices[].
             String[] values = alleles[lineNumber].split(",");
-
             String parsedEntriesIndices[] = new String[ploidWidth];
-            // Compare entries to values[] to determine index, append index to result.
-            for (int k = 0; k < parsedEntriesIndices.length; ++k) {
-                //String entryToTest = parsedEntriesResults[k];
-                for (int j = 0; j < values.length; ++j) { // Iterate through values
+            for (int k = 0; k < ploidWidth; ++k) { //parsedEntriesIndices.length
+                parsedEntriesIndices[k] = "."; // Initialize to unknown, otherwise it would be "0" which is incorrectly within the valid range.
+                for (int j = 0; j < values.length; ++j) { // Iterate through values, could use a dictionary here instead...
                     if ((parsedEntries[k]).compareToIgnoreCase(values[j]) == 0) {
                         parsedEntriesIndices[k] = "" + j;
                     }
                 }
             }
             String results = "";
-            for (int k = 0; k < parsedEntriesIndices.length; ++k) {
+            for (int k = 0; k < ploidWidth; ++k) { // parsedEntriesIndices.length
                 if (((parsedEntries[k]).compareToIgnoreCase(".") == 0) || ((parsedEntries[k]).compareToIgnoreCase("-") == 0)) {
-                    results += ".";
+                    if (k < parsedEntriesIndices.length - 1) {
+                        results += ("./");
+                    } else {
+                        results += ".";
+                    }
                 } else {
                     if (k < parsedEntriesIndices.length - 1) {
                         results += ("" + parsedEntriesIndices[k] + "/");
@@ -174,30 +181,11 @@ public class HmpToVcfTask implements Runnable {
             partialResults[columnNumber] = results;
 
         } catch (IndexOutOfBoundsException e) {
-            System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
             // Likely a malformed file or programming logical error:
-            String errorResult = "";
-
-
-
-            
-            // Temporary coverage:
-            switch (ploidWidth) {
-                case 1:
-                    errorResult = ".";
-                    break;
-                case 2:
-                    errorResult = "./.";
-                    break;
-                case 3:
-                    errorResult = "././.";
-                    break;
-                case 4:
-                    errorResult = "./././.";
-                    break;
-                default:
-                    errorResult = ".";
-                    break;
+            System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
+            String errorResult = ".";
+            for (int i = 0; i < ploidWidth - 1; ++i) {
+                errorResult += "/.";
             }
             partialResults[columnNumber] = errorResult;
         }

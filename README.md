@@ -19,13 +19,13 @@ The general flow of conversion works as follows:
 
 ***
 # Requirements:
-Quad-core CPU, 8gb RAM, ssd
+* Quad-core CPU, 8gb RAM, ssd
 
-Java 16.0.2
+* Java 16.0.2
 
-Maven 3.8.1
+* Maven 3.8.1
 
-JUnit 5
+* JUnit 5
 
 ***
 # Compilation and running:
