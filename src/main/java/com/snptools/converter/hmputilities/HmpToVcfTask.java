@@ -140,12 +140,10 @@ public class HmpToVcfTask implements Runnable {
             String parsedEntries[] = new String[ploidWidth];
             // Check the strand direction:
             if (strandDirections[lineNumber].equalsIgnoreCase("+")) { // if strand == +, then iterate from end to start
-                System.out.println("positive");
                 for (int i = 0; i < entry.length(); ++i) {
                     parsedEntries[i] = "" + entry.substring(i, 1 + i);
                 }
             } else { // else if strand == -, and then iterate from start to end.
-                System.out.println("negative");
                 for (int i = 0; i < entry.length(); ++i) {
                     parsedEntries[Math.abs(i - (entry.length() - 1))] = "" + entry.substring(i, i + 1);
                 }
