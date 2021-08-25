@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
  * A set of unit tests for HmpToCsvTask.
  * 
  * @author  Jeff Warner
- * @version 1.0, August 2021
+ * @version 1.1, August 2021
  */
 public class HmpToCsvTaskTest {
 
@@ -27,14 +27,13 @@ public class HmpToCsvTaskTest {
     final int END_LINE_HMP = 6;
 
     final int TOTAL_LINES = END_LINE_HMP - START_LINE_HMP;
-    final int COLUMN_PAIRS = 281; // is equal to half the number of data columns.
+    //final int COLUMN_PAIRS = 281; // is equal to half the number of data columns.
 
     final int START_COLUMN = 9; // Where this worker should start - GT column present. // double check this
     final int END_COLUMN = 290; // Where this worker should end.
     final int NUMBER_OF_COLUMNS = END_COLUMN - START_COLUMN; // The number of columns that should be kept by this worker.
-    final int COLUMN_WIDTH = 2; // <--- Depends on ploidiness. Diploid=2.
 
-    final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
+    //final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
 
     final String[] majorAlleles = new String[]{"A", "A", "C", "C", "T", "T", "G", "G", "A", "C"};
 
@@ -44,7 +43,8 @@ public class HmpToCsvTaskTest {
     @Test
     @DisplayName("shouldConstructHmpToCsvTask")
     public void shouldConstructHmpToCsvTask() {
-        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_COLUMNS, TOTAL_LINES, majorAlleles, 1);
+        final int ploidiness = 1; // Haploid.
+        HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_COLUMNS, TOTAL_LINES, majorAlleles, ploidiness);
         assertNotNull(hmpToCsvTask);
     }
 

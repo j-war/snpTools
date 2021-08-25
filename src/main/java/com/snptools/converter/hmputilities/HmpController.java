@@ -97,7 +97,7 @@ public class HmpController {
         convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Write output.
 
         mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME); // Writes the final output.
-        cleanUp(); // Attempt to delete temporary files.
+        //cleanUp(); // Attempt to delete temporary files.
     }
 
     public void startHmpToVcf() {
@@ -366,6 +366,16 @@ public class HmpController {
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
+                System.out.println("Controller report:");
+                System.out.println("NormalizeWorker[" + (i) + "]");
+                System.out.println("hmpFileName[" + (hmpFileName) + "]");
+                System.out.println("outputFileName[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
+                System.out.println("startLine[" + ((i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers) + NUMBER_OF_HEADER_LINES) + "]");
+                System.out.println("endLine[" + (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers) + NUMBER_OF_HEADER_LINES) + "]");
+                System.out.println("startColumn[" + (NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("numberOfColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("columnWidth[" + (hmpPloidiness) + "]");
+                System.out.println("End controller report.\n");
                 normalizePool[i] = new NormalizeInputTask(
                     hmpFileName,
                     outputFileName + TEMP_FILE_NAME + i,
@@ -405,6 +415,13 @@ public class HmpController {
             // Create task and add it to both pools and then start it immediately.
             // Split work evenly, give threads start and end lines
             for (int i = 0; i < workers; ++i) {
+                System.out.println("Controller report:");
+                System.out.println("HmpSumTask[" + (i) + "]");
+                System.out.println("inputFileName[" + (outputFileName + TEMP_FILE_NAME) + "]");
+                System.out.println("startLine[" + ((i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers)) + "]");
+                System.out.println("endLine[" + ((((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers)) + "]");
+                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("End controller report.\n");
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 sumPool[i] = new HmpSumTask(
                     outputFileName + TEMP_FILE_NAME,

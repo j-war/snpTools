@@ -13,9 +13,10 @@ import java.util.Scanner;
  * The HmpSumTask class is used count the frequencies of bases for a set of lines from an .hmp file.
  * The results are retrieved through the synchronized totals datastructure once the task has
  * completed and the thread was successfully joined.
+ * The width of an HMP entry does not need to be specified before running.
  * 
  * @author  Jeff Warner
- * @version 1.2, August 2021
+ * @version 1.3, August 2021
  */
 public class HmpSumTask implements Runnable {
 
@@ -24,7 +25,6 @@ public class HmpSumTask implements Runnable {
     private final int endLine;
     private final int totalColumns;
     private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
-    private final int COLUMN_WIDTH_HMP = 2; // Depends on ploidiness. Diploid=2.
 
     private List<int[]> totals = Collections.synchronizedList(new ArrayList<>()); // All access, including reading through .get(), must be in a synchronized block.
 
@@ -188,7 +188,7 @@ public class HmpSumTask implements Runnable {
                         lineScanner.close();
                         return;
                     }
-                } else {
+                } else { // Data was not found:
                     System.out.println("Malformed hmp file - there is an unexpected number of entries.");
                     lineScanner.close();
                     return;

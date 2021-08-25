@@ -15,10 +15,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
- * A set of unit tests for HmpSumTask.
+ * A set of unit tests for HmpSumTask. The input test lines should be csv style strings
+ * as HmpSumTask expects data from a NormalizedTask worker.
  * 
  * @author  Jeff Warner
- * @version 1.0, August 2021
+ * @version 1.1, August 2021
  */
 public class HmpSumTaskTest {
 
@@ -34,7 +35,6 @@ public class HmpSumTaskTest {
     final int START_COLUMN = 9; // Where this worker should start - GT column present. // double check this
     final int END_COLUMN = 290; // Where this worker should end.
     final int NUMBER_OF_COLUMNS = END_COLUMN - START_COLUMN; // The number of columns that should be kept by this worker.
-    final int COLUMN_WIDTH = 2; // <--- Depends on ploidiness. Diploid=2.
 
     final int NUMBER_OF_BASES_TO_SUM = 2 * (NUMBER_OF_COLUMNS);
     final int NUMBER_OF_BASES = 16 + 1; // ACTG...

@@ -20,7 +20,6 @@ import com.snptools.converter.fileutilities.FileController;
  */
 public class HmpToCsvTask implements Runnable {
 
-    private final int SIZE_OF_COLUMN = 3; // Including the comma: Example: "AA," is the column including the comma seperator.
     private final int ploidWidth;   // The width of the data entries representing the ploidiness of the data.
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
@@ -71,6 +70,9 @@ public class HmpToCsvTask implements Runnable {
             for (int i = startColumn; i < endColumn; ++i) {
                 for (int j = 0; j < totalLines; ++j) {
                     final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
+                    if (position <= 0) {
+                        System.out.println("position:[" + position + "]");
+                    }
                     randomAccessFile.seek(position); // Move pointer into position.
                     /* Convert intermediate value to allele:
                         * The RandomAccessFile.read() function returns bytes:
@@ -78,7 +80,7 @@ public class HmpToCsvTask implements Runnable {
                     */
                     String entry = "";
                     for (int k = 0; k < ploidWidth; ++k) {
-                        // Column size is 3 but we only want the first two chars while dropping the trailing comma.
+                        // Column size is X+1 but we only want the first X chars while dropping the trailing comma.
                         entry += FileController.intToChar(randomAccessFile.read());
                     }
                     accumulateResults(j, entry);
