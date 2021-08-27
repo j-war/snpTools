@@ -85,7 +85,7 @@ public class HmpToCsvTaskTest {
         HmpToCsvTask hmpToCsvTask = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, PLOIDINESS);
 
         // 3a.
-        Method accumulateResultsMethod = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
+        Method accumulateResultsMethod = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", long.class, String.class);
         accumulateResultsMethod.setAccessible(true);
 
         // 3b. Loop over assertions with test data:
@@ -125,7 +125,7 @@ public class HmpToCsvTaskTest {
         // 2.
         HmpToCsvTask hmpToCsvTaskTwo = new HmpToCsvTask(TEST_INPUT_HMP, TEST_INPUT_HMP, START_COLUMN, END_COLUMN, NUMBER_OF_TEST_COLUMNS, NUMBER_OF_TEST_COLUMNS, majorAlleles, 1);
         // 3a.
-        Method accumulateResultsMethodTwo = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", int.class, String.class);
+        Method accumulateResultsMethodTwo = HmpToCsvTask.class.getDeclaredMethod("accumulateResults", long.class, String.class);
         accumulateResultsMethodTwo.setAccessible(true);
         // 3b.
         for (int i = 0; i < NUMBER_OF_TEST_COLUMNS; ++i) {

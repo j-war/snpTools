@@ -94,9 +94,10 @@ public class HmpController {
         calculateMajors();
         //printIntermediateData();
 
-        convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Write output.
+        //convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Write output.
+        convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
 
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME); // Writes the final output.
+        //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
         //cleanUp(); // Attempt to delete temporary files.
     }
 
@@ -405,8 +406,6 @@ public class HmpController {
      * Creates a pool of workers and distributes the work evenly to calculate the results.
      * 
      * @param workers   The number of workers for this task. Simply the number of threads to create.
-     * 
-     * Note: Only diploid cells are currently supported.
      */
     private void processInputThreaded(int workers) {
         if (workers > 0) {
@@ -452,8 +451,6 @@ public class HmpController {
      * after all threads have completed.
      * 
      * @param workers   The number of workers for this task. Simply the number of threads to create.
-     * 
-     * Note: Only diploid cells are currently supported.
      */
     private void convertHmpToVcfThreaded(int workers) {
         if (workers > 0) {
@@ -660,10 +657,70 @@ public class HmpController {
             resultsPool = new HmpToCsvTask[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
+
+                System.out.println("Controller report:");
+                System.out.println("HmpToCsvTask[" + (i) + "]");
+                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
+                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
+                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
+                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
+                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("majorAllelesValues[array]");
+                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
+                System.out.println("End controller report.\n");
+
+
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTask(
                     outputFileName + TEMP_FILE_NAME,
-                    outputFileName + TEMP_FILE_NAME + i,
+                    outputFileName + TEMP_FILE_NAME_2ND + i,
+                    (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
+                    ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
+                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                    totalInputLines - NUMBER_OF_HEADER_LINES,
+                    majorAllelesValues,
+                    hmpPloidiness
+                );
+                threadPool[i] = new Thread(resultsPool[i]);
+                threadPool[i].start();
+            }
+            for (int i = 0; i < workers; ++i) {
+                try {
+                    threadPool[i].join();
+                } catch (InterruptedException e) {
+                    System.out.println("Error joining results worker [" + i + "].");
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private void convertHmpToCsvLargeThreaded(int workers) {
+        if (workers > 0) {
+            resultsPool = new HmpToCsvTaskLarge[workers];
+            Thread[] threadPool = new Thread[workers];
+            for (int i = 0; i < workers; ++i) {
+
+                System.out.println("Controller report:");
+                System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
+                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
+                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND) + "]");
+                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
+                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
+                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
+                System.out.println("majorAllelesValues[array]");
+                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
+                System.out.println("End controller report.\n");
+
+
+                // (i * lines / arg), (((1 + i) * lines) / arg)
+                resultsPool[i] = new HmpToCsvTaskLarge(
+                    outputFileName + TEMP_FILE_NAME,
+                    outputFileName + TEMP_FILE_NAME_2ND,// + i,
+                    (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
+                    (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
                     (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
                     ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
                     totalInputColumns - NUMBER_OF_HEADER_COLUMNS,

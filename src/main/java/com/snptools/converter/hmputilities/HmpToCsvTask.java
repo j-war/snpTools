@@ -1,12 +1,11 @@
 package com.snptools.converter.hmputilities;
+import com.snptools.converter.fileutilities.FileController;
 
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
-
-import com.snptools.converter.fileutilities.FileController;
 
 /**
  * The HmpToCsvTask class is used to calculate and write the results of the hmp to 
@@ -20,14 +19,14 @@ import com.snptools.converter.fileutilities.FileController;
  */
 public class HmpToCsvTask implements Runnable {
 
-    private final int ploidWidth;   // The width of the data entries representing the ploidiness of the data.
+    private final long ploidWidth;   // The width of the data entries representing the ploidiness of the data.
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
-    private final int startColumn;
-    private final int endColumn;
-    private final int totalColumns;
-    private final int totalLines;
+    private final long startColumn;
+    private final long endColumn;
+    private final long totalColumns;
+    private final long totalLines;
 
     //private String[] phenotypes;
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
@@ -52,12 +51,12 @@ public class HmpToCsvTask implements Runnable {
     public HmpToCsvTask(String inputFilename, String outputFilename, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int ploidiness) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
-        this.startColumn = startColumn;
-        this.endColumn = endColumn;
-        this.totalColumns = totalColumns;
-        this.totalLines = totalLines;
+        this.startColumn = (long) startColumn;
+        this.endColumn = (long) endColumn;
+        this.totalColumns = (long) totalColumns;
+        this.totalLines = (long) totalLines;
         this.majorAllelesValues = majorAllelesValues;
-        this.ploidWidth = ploidiness;
+        this.ploidWidth = (long) ploidiness;
         this.partialResults = new int[totalLines];
     }
 
@@ -67,10 +66,16 @@ public class HmpToCsvTask implements Runnable {
             FileOutputStream outputStream = new FileOutputStream(outputFilename);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            for (int i = startColumn; i < endColumn; ++i) {
-                for (int j = 0; j < totalLines; ++j) {
+            for (long i = startColumn; i < endColumn; ++i) {
+                for (long j = 0; j < totalLines; ++j) {
+                    //worker 0:
+                    // final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
+                    // 44429 * 44429 * (1 + 1) + 44429 * (1 + 1) = 3,947,960,940 / 2,147,483,647 347,006,356
+                    //worker 3:
+                    // final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
+                    //
                     final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
-                    if (position <= 0) {
+                    if (position <= 0L) {
                         System.out.println("position:[" + position + "]");
                     }
                     randomAccessFile.seek(position); // Move pointer into position.
@@ -111,10 +116,10 @@ public class HmpToCsvTask implements Runnable {
      * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
      * @param entry  Is a two character allele entry from an HMP file
      */
-    private void accumulateResults(int lineNumber, String entry) {
+    private void accumulateResults(long lineNumber, String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {
             System.out.println("The provided entry contained no data.");
-            partialResults[lineNumber] = MISSING_DATA + 1;
+            partialResults[(int) lineNumber] = MISSING_DATA + 1;
             return;
         }
         int result = 0;
@@ -129,7 +134,7 @@ public class HmpToCsvTask implements Runnable {
                      "B", "D", "H", "V", "N",
                      "b", "d", "h", "v", "n",
                      ".", "-":
-                    if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
+                    if (!allele.equalsIgnoreCase(majorAllelesValues[(int) lineNumber])) {
                         ++result;
                     }
                     break;
@@ -143,7 +148,7 @@ public class HmpToCsvTask implements Runnable {
             }
         }
         // Save result to linebuffer:
-        partialResults[lineNumber] = result;
+        partialResults[(int) lineNumber] = result;
     }
 
 }
