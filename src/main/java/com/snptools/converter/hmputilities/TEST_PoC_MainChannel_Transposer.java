@@ -1,6 +1,5 @@
 package com.snptools.converter.hmputilities;
 
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -43,12 +42,11 @@ class TEST_PoC_MainChannel_Transposer {
             RandomAccessFile writer = new RandomAccessFile(outputFilename, "rw");
             FileChannel channel = writer.getChannel()
         ) {
-            //for (int i = 0; i < startLine; ++i) { reader.readLine(); System.out.println("Skipping a line."); } // Skip ahead to starting line.
+            for (int i = 0; i < startLine; ++i) { reader.readLine(); System.out.println("Skipping a line."); } // Skip ahead to starting line.
             for (int i = (int) startLine; i < endLine; ++i) {//endLine
                 // 4.
                 String line = reader.readLine();
-                System.out.println("Line: [" + line + "]");
-                //accumulateResults(i, line);
+                //System.out.println("Line: [" + line + "]");
 
                 if (line != null) {
                     Scanner lineScanner = new Scanner(line);
@@ -61,11 +59,9 @@ class TEST_PoC_MainChannel_Transposer {
                         //System.out.println("Line: " + line);
                         if (lineScanner.hasNext()) {
                             String value = lineScanner.next();
-
-
                             if (value.length() >= 1) {
                                 accumulateResults(i, value);
-                                System.out.println("Value: [" + value + "] | partialResults[" + i + "]=[" + partialResults[i] + "]");
+                                //System.out.println("Value: [" + value + "] | partialResults[" + i + "]=[" + partialResults[i] + "]");
                                 final long position = (j * totalLines * 2) + (i * 1 * 2);
 
                                 /*
