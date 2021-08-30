@@ -19,7 +19,7 @@ import java.io.RandomAccessFile;
  */
 public class HmpToCsvTask implements Runnable {
 
-    private final long ploidWidth;   // The width of the data entries representing the ploidiness of the data.
+    private final int ploidWidth;   // The width of the data entries representing the ploidiness of the data.
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
@@ -56,7 +56,7 @@ public class HmpToCsvTask implements Runnable {
         this.totalColumns = (long) totalColumns;
         this.totalLines = (long) totalLines;
         this.majorAllelesValues = majorAllelesValues;
-        this.ploidWidth = (long) ploidiness;
+        this.ploidWidth = ploidiness;
         this.partialResults = new int[totalLines];
     }
 
@@ -114,7 +114,7 @@ public class HmpToCsvTask implements Runnable {
      * Interprets the HMP entry into the line buffer at the specified line.
      * 
      * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
-     * @param entry  Is a two character allele entry from an HMP file
+     * @param entry  Is a character allele entry from an HMP file. Width is equal to ploidiness.
      */
     private void accumulateResults(long lineNumber, String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {

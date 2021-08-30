@@ -23,15 +23,19 @@ The general flow of conversion works as follows:
 
 * Java 16.0.2
 
-* Maven 3.8.1
+* Maven 3.8.2
 
-* JUnit 5
+* JUnit 5 (5.7.2)
 
 ***
 # Compilation and running:
 File names as input arguments should be relative and have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
 
 ## Compiling:
+```
+mvn package
+```
+or:
 ```
 javac -d [Destination directory relative to current directory] Main.java
 ```
@@ -43,6 +47,10 @@ javac -d Converter DataInput.java
 ```
 
 ## Running:
+```
+java -cp target/converter-1.0.jar com.snptools.converter.DataInput [mode] [./InputFolder/biodata.hmp] [./OutputFolder/biodataOut.vcf]
+```
+or:
 ```
 java -cp [Classpath directory] Main [mode] [Relative input filepath with an extension] [Relative output filepath with an extension]
 ```

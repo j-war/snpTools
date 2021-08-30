@@ -82,6 +82,31 @@
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>3.1.2</version>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>3.0.0</version>
+          <executions>
+            <execution>
+              <id>enforce-maven</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <requireMavenVersion>
+                    <version>3.8.2</version>
+                    <message>Untested Maven version. Update to 3.8.2.</message>
+                  </requireMavenVersion>
+                  <requireJavaVersion>
+                    <version>16</version>
+                    <message>Untested Java version. Update to 16.0.2.</message>
+                  </requireJavaVersion>
+                </rules>    
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>

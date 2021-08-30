@@ -94,11 +94,17 @@ public class HmpController {
         calculateMajors();
         //printIntermediateData();
 
-        //convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Write output.
-        convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
+        // If the file is "large", use the 'large' method:
+        if (totalInputLines >= 2500 || totalInputColumns >= 250) {
+            System.out.println("Large input file detected.\n");
+            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
+        } else { // Else, the file is "small", use the default method:
+            convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
+        }
 
-        //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-        //cleanUp(); // Attempt to delete temporary files.
+        cleanUp(); // Attempt to delete temporary files.
+
     }
 
     public void startHmpToVcf() {
@@ -705,7 +711,7 @@ public class HmpController {
                 System.out.println("Controller report:");
                 System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
                 System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
-                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND) + "]");
+                System.out.println("outputFilename[" + (outputFileName) + "]");
                 System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
                 System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
                 System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
@@ -718,7 +724,7 @@ public class HmpController {
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTaskLarge(
                     outputFileName + TEMP_FILE_NAME,
-                    outputFileName + TEMP_FILE_NAME_2ND,// + i,
+                    outputFileName,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
                     (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),

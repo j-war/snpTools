@@ -32,7 +32,6 @@ public class HmpToCsvTaskLarge implements Runnable {
     private final long endColumn;
     private final long totalColumns;
     private final long totalLines;
-    private long counter = 0;
 
     //private String[] phenotypes;
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
@@ -96,7 +95,8 @@ public class HmpToCsvTaskLarge implements Runnable {
                             if (value.length() >= 1) {
                                 accumulateResults(j, value);
                                 //System.out.println("Value: [" + value + "] | partialResults[" + i + "]=[" + partialResults[i] + "]");
-                                final long position = (j * totalLines * 2) + (i * 1 * 2) + (3 * j);
+                                final long position = (j * totalLines * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+                                // or it can be the accumulated length of phenotypes written so far, including the current line that is about to be written.
 
                                 /*
                                 ByteBuffer buff = ByteBuffer.wrap((partialResults[i] + "\n").getBytes(StandardCharsets.UTF_8));
@@ -110,18 +110,15 @@ public class HmpToCsvTaskLarge implements Runnable {
                                     (dest line) = j * (lineWidth of dest) * 2
                                     (dest offset) = i * (width of one dest entry) * 2
                                 */
-                                if (i == 0) { // Write the phenotype during first line of input
+                                if (i == 0) { // Write the phenotype during first line of input which is the first column of output.
                                     ByteBuffer b1 = ByteBuffer.wrap(   ("-9," + partialResults[j] + ",").getBytes()  );
-                                    System.out.println("writing pheno:[" + counter + "][" + partialResults[j] + "]");
+                                    //System.out.println("writing pheno:[" + "][" + partialResults[j] + "] alleles:[" + majorAllelesValues[j] + "]");
                                     while (b1.remaining() > 0) {
-                                        //channel.write(b1, position + 2);
-                                        channel.write(b1, position);
+                                        channel.write(b1, position); // Do NOT offset first column of output.
                                     }
-                                    counter += 1;
                                 } else if (i < totalLines - 1) { // if not the last LINE of the input.
                                     ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  ); //partialResults[i]
                                     while (b1.remaining() > 0) {
-                                        //channel.write(b1, position + 2);
                                         channel.write(b1, position + 3); // 3 = width of phenotype for that line
                                     }
                                 } else { // Last line of input = last column
@@ -136,25 +133,14 @@ public class HmpToCsvTaskLarge implements Runnable {
                             System.out.println("Finished line:[" + i + "]");
                         }
                     }
-                    /*
-                        //writer.writeUTF("-9,"); // Phenotype placeholder.
-                        for (int j = 0; j < totalLines; ++j) {
-                            if (j < totalLines - 1) {
-                                writer.writeUTF(partialResults[j] + ",");
-                            } else {
-                                writer.writeUTF("" + partialResults[j]);
-                            }
-                        }
-                        writer.writeUTF("\n");
-                    */
                     lineScanner.close();
                 } else {
                     System.out.println("Null line:[" + i + "]");
                 }
 
             }
+            channel.force(true); // Attempt to force writing before thread/task ends.
 
-            channel.force(true);
         } catch (FileNotFoundException e) {
             System.out.println("There was an error finding a file in a HmpSumTask worker.");
             e.printStackTrace();
@@ -171,12 +157,12 @@ public class HmpToCsvTaskLarge implements Runnable {
      * Interprets the HMP entry into the line buffer at the specified line.
      * 
      * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
-     * @param entry  Is a two character allele entry from an HMP file
+     * @param entry  Is a character allele entry from an HMP file. Width is equal to ploidiness.
      */
-    private void accumulateResults(long lineNumber, String entry) {
+    private void accumulateResults(int lineNumber, String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {
             System.out.println("The provided entry contained no data.");
-            partialResults[(int) lineNumber] = MISSING_DATA + 1;
+            partialResults[lineNumber] = MISSING_DATA + 1;
             return;
         }
         int result = 0;
@@ -191,7 +177,7 @@ public class HmpToCsvTaskLarge implements Runnable {
                      "B", "D", "H", "V", "N",
                      "b", "d", "h", "v", "n",
                      ".", "-":
-                    if (!allele.equalsIgnoreCase(majorAllelesValues[(int) lineNumber])) {
+                    if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
                         ++result;
                     }
                     break;
@@ -205,7 +191,7 @@ public class HmpToCsvTaskLarge implements Runnable {
             }
         }
         // Save result to linebuffer:
-        partialResults[(int) lineNumber] = result;
+        partialResults[lineNumber] = result;
     }
 
 }
