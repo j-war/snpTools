@@ -24,6 +24,7 @@ public class HmpSumTask implements Runnable {
     private final int startLine;
     private final int endLine;
     private final int totalColumns;
+    private final boolean sumWholeFile;
     private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
 
     private List<int[]> totals = Collections.synchronizedList(new ArrayList<>()); // All access, including reading through .get(), must be in a synchronized block.
@@ -35,12 +36,14 @@ public class HmpSumTask implements Runnable {
      * @param startLine The line for this worker to start at.
      * @param endLine   The line for this worker to finish at.
      * @param totalColumns  The number of columns that this worker should sum.
+     * @param sumWholeFile  Whether this worker should skip ahead to the starting line or not.
      */
-    public HmpSumTask(String filename, int startLine, int endLine, int totalColumns) {
+    public HmpSumTask(String filename, int startLine, int endLine, int totalColumns, boolean sumWholeFile) {
         this.inputFilename = filename;
         this.startLine = startLine;
         this.endLine = endLine;
         this.totalColumns = totalColumns;
+        this.sumWholeFile = sumWholeFile;
         //initTotals(); // Called in run()/start().
     }
 
@@ -73,7 +76,9 @@ public class HmpSumTask implements Runnable {
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilename))) {
             initTotals();
             // 2.
-            for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting line.
+            if (!sumWholeFile) {
+                for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting line.
+            }
             // 3.
             for (int i = 0; i < endLine - startLine; ++i) {
                 // 4.

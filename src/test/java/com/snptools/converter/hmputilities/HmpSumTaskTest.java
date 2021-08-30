@@ -45,7 +45,7 @@ public class HmpSumTaskTest {
     @Test
     @DisplayName("shouldConstructHmpSumTask")
     public void shouldConstructHmpSumTask() {
-        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, START_LINE_HMP, END_LINE_HMP, COLUMN_PAIRS);
+        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, START_LINE_HMP, END_LINE_HMP, COLUMN_PAIRS, false);
         assertNotNull(hmpSumTask);
     }
 
@@ -56,7 +56,7 @@ public class HmpSumTaskTest {
     @Test
     @DisplayName("testInitAndCollectTotals")
     void testInitAndCollectTotals() throws InterruptedException {
-        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, START_LINE_HMP, END_LINE_HMP, NUMBER_OF_COLUMNS);
+        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, START_LINE_HMP, END_LINE_HMP, NUMBER_OF_COLUMNS, false);
         Thread task = new Thread(hmpSumTask);
         task.start();
         task.join();
@@ -132,7 +132,7 @@ public class HmpSumTaskTest {
         }
 
         // 2.
-        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, 0, NUMBER_OF_TESTLINES, NUMBER_OF_TEST_COLUMNS);
+        HmpSumTask hmpSumTask = new HmpSumTask(TEST_INPUT_HMP, 0, NUMBER_OF_TESTLINES, NUMBER_OF_TEST_COLUMNS, false);
 
         // 3.
         Method initTotals = HmpSumTask.class.getDeclaredMethod("initTotals");

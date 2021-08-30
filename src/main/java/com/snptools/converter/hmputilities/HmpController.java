@@ -83,8 +83,8 @@ public class HmpController {
 
         normalizeInputThreaded(NUMBER_OF_WORKERS);
 
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME); // Merge the files into a single temp file.
+        //String intermediateFile = outputFileName + TEMP_FILE_NAME;
+        //mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME); // Merge the files into a single temp file.
 
         processInputThreaded(NUMBER_OF_WORKERS); // Sum frequencies.
 
@@ -98,12 +98,13 @@ public class HmpController {
         if (totalInputLines >= 2500 || totalInputColumns >= 250) {
             System.out.println("Large input file detected.\n");
             convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
         } else { // Else, the file is "small", use the default method:
             convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
             mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
         }
-
-        cleanUp(); // Attempt to delete temporary files.
+//cleanupall?
+        //cleanUp(); // Attempt to delete temporary files.
 
     }
 
@@ -422,17 +423,18 @@ public class HmpController {
             for (int i = 0; i < workers; ++i) {
                 System.out.println("Controller report:");
                 System.out.println("HmpSumTask[" + (i) + "]");
-                System.out.println("inputFileName[" + (outputFileName + TEMP_FILE_NAME) + "]");
+                System.out.println("inputFileName[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
                 System.out.println("startLine[" + ((i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers)) + "]");
                 System.out.println("endLine[" + ((((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers)) + "]");
                 System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
                 System.out.println("End controller report.\n");
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 sumPool[i] = new HmpSumTask(
-                    outputFileName + TEMP_FILE_NAME,
+                    outputFileName + TEMP_FILE_NAME + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers),
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers),
-                    (totalInputColumns - NUMBER_OF_HEADER_COLUMNS)
+                    (totalInputColumns - NUMBER_OF_HEADER_COLUMNS),
+                    true
                 );
                 threadPool[i] = new Thread(sumPool[i]);
                 threadPool[i].start();
@@ -710,8 +712,8 @@ public class HmpController {
 
                 System.out.println("Controller report:");
                 System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
-                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
-                System.out.println("outputFilename[" + (outputFileName) + "]");
+                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
+                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
                 System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
                 System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
                 System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
@@ -723,8 +725,8 @@ public class HmpController {
 
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTaskLarge(
-                    outputFileName + TEMP_FILE_NAME,
-                    outputFileName,
+                    outputFileName + TEMP_FILE_NAME + i,
+                    outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
                     (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),

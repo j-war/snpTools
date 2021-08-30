@@ -74,9 +74,10 @@ public class HmpToCsvTaskLarge implements Runnable {
             RandomAccessFile writer = new RandomAccessFile(outputFilename, "rw");
             FileChannel channel = writer.getChannel()
         ) {
-            for (int i = 0; i < startLine; ++i) { reader.readLine(); } // System.out.println("Skipping a line."); } // Skip ahead to starting line.
-            for (int i = (int) startLine; i < endLine; ++i) { //endLine
-                // 4.
+            //for (int i = 0; i < startLine; ++i) { reader.readLine(); } // System.out.println("Skipping a line."); } // Skip ahead to starting line.
+            //for (int i = (int) startLine; i < endLine; ++i) {
+            for (int i = 0; i < endLine - startLine; ++i) {
+                    // 4.
                 String line = reader.readLine();
                 //System.out.println("Line: [" + line + "]");
                 if (line != null) {
@@ -85,7 +86,7 @@ public class HmpToCsvTaskLarge implements Runnable {
 
                     //System.out.println("totalColumns: [" + totalColumns + "]");
 
-                    for (int j = 0; j < totalColumns; ++j) {
+                    for (int j = 0; j < (totalColumns); ++j) { //totalColumns endColumn - startColumn
                         //System.out.println("line length:[" + line.length() + "]");
                         //System.out.println("Line: " + line);
                         if (lineScanner.hasNext()) {
@@ -95,7 +96,15 @@ public class HmpToCsvTaskLarge implements Runnable {
                             if (value.length() >= 1) {
                                 accumulateResults(j, value);
                                 //System.out.println("Value: [" + value + "] | partialResults[" + i + "]=[" + partialResults[i] + "]");
-                                final long position = (j * totalLines * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+                                //final long position1 = (j * (totalLines) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+                                //final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+                                
+                                
+                                //this
+                                //final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+                                
+                                
+                                
                                 // or it can be the accumulated length of phenotypes written so far, including the current line that is about to be written.
 
                                 /*
@@ -110,24 +119,49 @@ public class HmpToCsvTaskLarge implements Runnable {
                                     (dest line) = j * (lineWidth of dest) * 2
                                     (dest offset) = i * (width of one dest entry) * 2
                                 */
-                                if (i == 0) { // Write the phenotype during first line of input which is the first column of output.
-                                    ByteBuffer b1 = ByteBuffer.wrap(   ("-9," + partialResults[j] + ",").getBytes()  );
-                                    //System.out.println("writing pheno:[" + "][" + partialResults[j] + "] alleles:[" + majorAllelesValues[j] + "]");
-                                    while (b1.remaining() > 0) {
-                                        channel.write(b1, position); // Do NOT offset first column of output.
+
+                                // Only the first thread should be using offsets!
+                                // They're the worker that will be handling phenotypes.
+                                if (startColumn == 0) {
+                                    final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
+
+                                    if (i == 0) { // Write the phenotype during first line of input which is the first column of output.
+                                        ByteBuffer b1 = ByteBuffer.wrap(   ("-9," + partialResults[j] + ",").getBytes()  );
+                                        //System.out.println("writing pheno:[" + "][" + partialResults[j] + "] alleles:[" + majorAllelesValues[j] + "]");
+                                        while (b1.remaining() > 0) {
+                                            channel.write(b1, position); // Do NOT offset first column of output.
+                                        }
+                                    } else if (i < (endLine - startLine) - 1) { // if not the last LINE of the input.
+                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  ); //partialResults[i]
+                                        while (b1.remaining() > 0) {
+                                            channel.write(b1, position + 3); // 3 = width of phenotype for that line
+                                        }
+                                    } else { // Last line of input = last column
+                                        //ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[i] + "\n-9,").getBytes()  ); //partialResults[i]
+                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + "\n").getBytes()  ); //partialResults[i]
+                                        while (b1.remaining() > 0) {
+                                            channel.write(b1, position + 3); // 3 = width of phenotype for that line
+                                        }
                                     }
-                                } else if (i < totalLines - 1) { // if not the last LINE of the input.
-                                    ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  ); //partialResults[i]
-                                    while (b1.remaining() > 0) {
-                                        channel.write(b1, position + 3); // 3 = width of phenotype for that line
-                                    }
-                                } else { // Last line of input = last column
-                                    //ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[i] + "\n-9,").getBytes()  ); //partialResults[i]
-                                    ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + "\n").getBytes()  ); //partialResults[i]
-                                    while (b1.remaining() > 0) {
-                                        channel.write(b1, position + 3); // 3 = width of phenotype for that line
+
+                                } else { // Else, this thread is not the first and does not need an offset.
+                                    final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2); // 3 * j -> 3= width of phenotype,
+
+                                    if (i < (endLine - startLine) - 1) { // if not the last LINE of the input.
+                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  );
+                                        while (b1.remaining() > 0) {
+                                            channel.write(b1, position);
+                                        }
+                                    } else { // Last line of input = last column
+                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + "\n").getBytes()  );
+                                        while (b1.remaining() > 0) {
+                                            channel.write(b1, position);
+                                        }
                                     }
                                 }
+
+
+
                             }
                         } else {
                             System.out.println("Finished line:[" + i + "]");
