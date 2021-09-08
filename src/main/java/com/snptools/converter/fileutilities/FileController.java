@@ -113,10 +113,11 @@ public class FileController {
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The path containing the name of the resultant file.
      * @param inputName The path containing the file name, with an extension.
+     * @throws IOException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite files, permissions allowing, without warning.
      */
-    public static void mergeFiles(int count, String resultFile, String inputName) {
+    public static void mergeFiles(int count, String resultFile, String inputName) throws IOException {
         try (
             PrintWriter pw = new PrintWriter(resultFile)
         ) {
@@ -131,6 +132,9 @@ public class FileController {
                 br.close();
             }
             pw.flush();
+            if (pw.checkError()) {
+                throw new IOException("Error: An IOException occurred while merging files - the disk may be full.");
+            }
         } catch (FileNotFoundException e) {
             System.out.println("An intermediate file appears to be missing.");
             e.printStackTrace();
@@ -147,8 +151,9 @@ public class FileController {
      * @param fileCount The number of files in the series.
      * @param resultFile    The output location of the merged files with filename and extension.
      * @param tempName  The file path with extension of the files to be merged.
+     * @throws IOException  If the print writer experiences an error such as a full disk.
      */
-    public static void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) {
+    public static void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws IOException {
         try (
             PrintWriter pw = new PrintWriter(resultFile)
         ) {
@@ -175,6 +180,9 @@ public class FileController {
             // Close the files:
             for (int i = 0; i < fileCount; ++i) {
                 (filesToRead[i]).close();
+            }
+            if (pw.checkError()) {
+                throw new IOException("Error: An IOException occurred while merging files - the disk may be full.");
             }
         } catch (FileNotFoundException e) {
             System.out.println("An intermediate file appears to be missing.");

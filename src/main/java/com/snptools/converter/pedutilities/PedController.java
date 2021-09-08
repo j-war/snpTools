@@ -69,9 +69,14 @@ public class PedController {
         // 800ms total.
 
         calculateResultsThreaded(NUMBER_OF_WORKERS); // 440ms - Scan the file comparing the file entry to the entry in majorAlleles.
-
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME); // Writes the final output.
-        cleanUp(); // Attempt to clean up temporary files.
+        try {
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME); // Writes the final output.
+            cleanUp(); // Attempt to clean up temporary files.
+        } catch (IOException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            e.printStackTrace();
+        }
 
         //printTotals();
     }
@@ -257,10 +262,11 @@ public class PedController {
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and an extension.
      * @param tempName  The intermediate file containing its appendix, file path, and an extension.
+     * @throws IOException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
      */
-    private void mergeFiles(int count, String resultFile, String tempName) {
+    private void mergeFiles(int count, String resultFile, String tempName) throws IOException {
         FileController.mergeFiles(count, resultFile, tempName);
     }
 

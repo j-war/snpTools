@@ -75,15 +75,20 @@ public class VcfController {
         }
 
         normalizeInputThreaded(NUMBER_OF_WORKERS); // Strip and normalize genotype data out and into an intermediate file.
+        try {
+            String intermediateFile = outputFileName + TEMP_FILE_NAME;
+            mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
+            // total: 800-900ms for 3.5mb
+    
+            processInputThreaded(NUMBER_OF_WORKERS); // Process the prepared files to their results.
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
 
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
-        // total: 800-900ms for 3.5mb
-
-        processInputThreaded(NUMBER_OF_WORKERS); // Process the prepared files to their results.
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
-
-        cleanUpAll();
+            cleanUpAll();
+        } catch (IOException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            e.printStackTrace();
+        }
     }
 
     public void startVcfToHmp() {
@@ -115,15 +120,20 @@ public class VcfController {
         createOutputLineHeaders();
 
         normalizeInputThreaded(NUMBER_OF_WORKERS); // Strip and normalize genotype data out and into an intermediate file.
-
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
-        // total: 800-900ms for 3.5mb
-
-        convertVcfToHmpThreaded(NUMBER_OF_WORKERS);
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
-
-        cleanUpAll();
+        try {
+            String intermediateFile = outputFileName + TEMP_FILE_NAME;
+            mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
+            // total: 800-900ms for 3.5mb
+    
+            convertVcfToHmpThreaded(NUMBER_OF_WORKERS);
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
+    
+            cleanUpAll();
+        } catch (IOException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -594,10 +604,11 @@ outputLineHeaders[1] onwards =
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and with an extension.
      * @param tempName  The intermediate file containing its appendix, file path, with an extension.
+     * @throws IOException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
      */
-    private void mergeFiles(int count, String resultFile, String tempName) {
+    private void mergeFiles(int count, String resultFile, String tempName) throws IOException {
         FileController.mergeFiles(count, resultFile, tempName);
     }
 
