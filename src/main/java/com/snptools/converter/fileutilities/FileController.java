@@ -6,6 +6,10 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.stream.Stream;
 
@@ -136,6 +140,51 @@ public class FileController {
         }
     }
 
+
+    /**
+     * Merges the lines of the series of files into a resultant file.
+     * @param lineCount The number of data lines that each file contains.
+     * @param fileCount The number of files in the series.
+     * @param resultFile    The output location of the merged files with filename and extension.
+     * @param tempName  The file path with extension of the files to be merged.
+     */
+    public static void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) {
+        try (
+            PrintWriter pw = new PrintWriter(resultFile)
+        ) {
+            // Make a list of temporary files and open them all:
+            BufferedReader[] filesToRead = new BufferedReader[fileCount];
+            for (int i = 0; i < fileCount; ++i) {
+                filesToRead[i] = new BufferedReader(new FileReader(tempName + i));
+            }
+
+            // Read in 1 line from each:
+            for (int i = 0; i < lineCount; ++i) {
+                String line = "";
+                for (int j = 0; j < fileCount; ++j) {
+                    if (j == 0) {
+                        line += ((filesToRead[j]).readLine());
+                    } else {
+                        line += ("," + (filesToRead[j]).readLine());
+                    }
+                }
+                pw.println(line);
+            }
+            pw.flush();
+
+            // Close the files:
+            for (int i = 0; i < fileCount; ++i) {
+                (filesToRead[i]).close();
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("An intermediate file appears to be missing.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.println("There was an error attempting to access an intermediate file.");
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Attempts to delete temporary files associated with a requested conversion.
      * @param count The number of files in the set.
@@ -178,6 +227,52 @@ public class FileController {
         } catch (SecurityException e) {
             System.out.println("Unable to delete file. The security manager is denying access to the file.");
         }
+    }
+
+    /**
+     * Attempts to delete a series of temporary directories.
+     * @param numberOfFolders  The path containing the file name, with an extension, to be deleted.
+     * @param outputFileName  The path containing the file name, with an extension, to be deleted.
+     * 
+     *  Note: May silently fail to delete temporary files if there are certain security settings on the system.
+     *        Will delete and/or overwrite existing data with no warning or prompts.
+     */
+    public static void deleteTempFolders(int numberOfFolders, String outputFileName) {
+        try {
+            for (int i = 0; i < numberOfFolders; ++i) {
+                Path outputFolder = Paths.get(outputFileName).getParent().normalize();
+                File tempDir = new File("./" + outputFolder.toString() + "/temp" + i + "/");
+                recursivelyDeleteFolder(tempDir);
+            }
+        } catch (NullPointerException e) {
+            System.out.println("The provided pathname could not be found.");
+        } catch (SecurityException e) {
+            System.out.println("Unable to delete file. The security manager is denying access to the file.");
+        }
+    }
+
+    /**
+     * Recursively deletes all files and folders while avoiding symbolic links.
+     * @param file  The folder its content to be deleted.
+     * 
+     * Note: May not work with certain security settings.
+     */
+    private static void recursivelyDeleteFolder(File folderToDelete) {
+        File[] contents = folderToDelete.listFiles();
+        if (contents != null) {
+            for (File file : contents) {
+                try {
+                    if (! Files.isSymbolicLink(file.toPath())) {
+                        recursivelyDeleteFolder(file);
+                    }
+                } catch (InvalidPathException e) {
+                    // Ignore this exception:
+                    // The file was deleted by another process or it does not exist, simply continue.
+                    // e.printStackTrace();
+                }
+            }
+        }
+        folderToDelete.delete();
     }
     
     // Merge a list of string arrays and return the result

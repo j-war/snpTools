@@ -1,13 +1,17 @@
 package com.snptools.converter.hmputilities;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.util.Scanner;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * The HmpToCsvTaskLarge class is used to calculate and write the results of the hmp to 
@@ -18,25 +22,26 @@ import java.util.Scanner;
  * and the threads were successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.2, August 2021
+ * @version 1.4, September 2021
  */
 public class HmpToCsvTaskLarge implements Runnable {
 
-    private final long ploidWidth;   // The width of the data entries representing the ploidiness of the data.
     private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
+
     private final long startLine;
     private final long endLine;
+    private final long totalLines;
+
     private final long startColumn;
     private final long endColumn;
     private final long totalColumns;
-    private final long totalLines;
 
-    //private String[] phenotypes;
+    private final int portion; // The portion of the total data that this worker is working on.
+
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
 
-    private int[] partialResults; // A line buffer containing accumulated results.
 
     /**
      * Compares the input file to the calculated site's major and writes its output to the provided path.
@@ -53,7 +58,7 @@ public class HmpToCsvTaskLarge implements Runnable {
      * @param majorAllelesValues    A reference to the previously calculated major allleles.
      * @param ploidiness    The width of the data entries representing the ploidiness of the data.
      */
-    public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int ploidiness) {
+    public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int portion) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
         this.startColumn = (long) startColumn;
@@ -63,117 +68,120 @@ public class HmpToCsvTaskLarge implements Runnable {
         this.totalColumns = (long) totalColumns;
         this.totalLines = (long) totalLines;
         this.majorAllelesValues = majorAllelesValues;
-        this.ploidWidth = (long) ploidiness;
-        this.partialResults = new int[totalColumns];
+        this.portion = portion;
     }
 
     public void run() {
         // Stream input while randomly writing:
         try (
             BufferedReader reader = new BufferedReader(new FileReader(inputFilename));
-            RandomAccessFile writer = new RandomAccessFile(outputFilename, "rw");
-            FileChannel channel = writer.getChannel()
+            FileOutputStream outputStream = new FileOutputStream(outputFilename);
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            //for (int i = 0; i < startLine; ++i) { reader.readLine(); } // System.out.println("Skipping a line."); } // Skip ahead to starting line.
-            //for (int i = (int) startLine; i < endLine; ++i) {
-            for (int i = 0; i < endLine - startLine; ++i) {
-                    // 4.
-                String line = reader.readLine();
-                //System.out.println("Line: [" + line + "]");
-                if (line != null) {
-                    Scanner lineScanner = new Scanner(line);
-                    lineScanner.useDelimiter(",");
+            int numberOfFilesInSeries = 0;
+            long X = startLine;
+            long Y = endLine;
+            int chunkSize = 1000; // Tuning parameter.
 
-                    //System.out.println("totalColumns: [" + totalColumns + "]");
+            // Create temp folder - assume we will need folders:
+            Path outputFolder = Paths.get(outputFilename).getParent().normalize();
+            Path outputFile = Paths.get(outputFilename).getFileName();
+            File tempDir = new File(outputFolder.toString() + "/temp" + portion + "/");
+            if (!tempDir.exists()){
+                tempDir.mkdir();
+            } // else { System.out.println("Temp directory already exists."); }
 
-                    for (int j = 0; j < (totalColumns); ++j) { //totalColumns endColumn - startColumn
-                        //System.out.println("line length:[" + line.length() + "]");
-                        //System.out.println("Line: " + line);
-                        if (lineScanner.hasNext()) {
-                            String value = lineScanner.next();
+            //System.out.println("outputFile:[" + outputFile + "]"); // out.txt
+            //System.out.println("outputFilename:[" + outputFilename + "]"); // ./Output/out.txt
+            //System.out.println("parent folder:[" + outputFolder + "]"); // Output
+            //System.out.println("temp folder:[" + tempDir + "]"); // Output/tempX
+            // "./" + tempDir + "/" + outputFile + i
+            // ./Output/tempX/out.txt1
 
+            while (X < Y) {
+                List<List<Integer>> inputChunk = new ArrayList<List<Integer>>(); // Inner List holds lines/rows.
+                List<List<Integer>> outputChunk = new ArrayList<List<Integer>>(); // Inner List holds columns.
 
-                            if (value.length() >= 1) {
-                                accumulateResults(j, value);
-                                //System.out.println("Value: [" + value + "] | partialResults[" + i + "]=[" + partialResults[i] + "]");
-                                //final long position1 = (j * (totalLines) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
-                                //final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
-                                
-                                
-                                //this
-                                //final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
-                                
-                                
-                                
-                                // or it can be the accumulated length of phenotypes written so far, including the current line that is about to be written.
+                int offsetCorrectionFactor = 0;
 
-                                /*
-                                ByteBuffer buff = ByteBuffer.wrap((partialResults[i] + "\n").getBytes(StandardCharsets.UTF_8));
+                for (int j = 0; j < chunkSize; ++j) {
+                    inputChunk.add(j, new ArrayList<Integer>());
+                    String line = reader.readLine();
+                    if (line != null) {
+                        if (!(line.isBlank()) || !(line.isEmpty())) {
+                            String[] arr = line.split(",");
 
-                                i = source line
-                                j = source columns
-                                source column determines dest line
-                                source line determines dest column
+                            // Initialize the output's inner list:
+                            for (int k = 0; k < arr.length; ++k) { // For the number of input columns:
+                                //outputChunk.add(k, new ArrayList<Integer>());
+                            }
 
-                                (dest position) =  (dest line) + (dest offset)
-                                    (dest line) = j * (lineWidth of dest) * 2
-                                    (dest offset) = i * (width of one dest entry) * 2
-                                */
-
-                                // Only the first thread should be using offsets!
-                                // They're the worker that will be handling phenotypes.
-                                if (startColumn == 0) {
-                                    final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2) + (3 * j); // 3 * j -> 3= width of phenotype,
-
-                                    if (i == 0) { // Write the phenotype during first line of input which is the first column of output.
-                                        ByteBuffer b1 = ByteBuffer.wrap(   ("-9," + partialResults[j] + ",").getBytes()  );
-                                        //System.out.println("writing pheno:[" + "][" + partialResults[j] + "] alleles:[" + majorAllelesValues[j] + "]");
-                                        while (b1.remaining() > 0) {
-                                            channel.write(b1, position); // Do NOT offset first column of output.
-                                        }
-                                    } else if (i < (endLine - startLine) - 1) { // if not the last LINE of the input.
-                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  ); //partialResults[i]
-                                        while (b1.remaining() > 0) {
-                                            channel.write(b1, position + 3); // 3 = width of phenotype for that line
-                                        }
-                                    } else { // Last line of input = last column
-                                        //ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[i] + "\n-9,").getBytes()  ); //partialResults[i]
-                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + "\n").getBytes()  ); //partialResults[i]
-                                        while (b1.remaining() > 0) {
-                                            channel.write(b1, position + 3); // 3 = width of phenotype for that line
-                                        }
-                                    }
-
-                                } else { // Else, this thread is not the first and does not need an offset.
-                                    final long position = (j * (endLine - startLine) * 2) + (i * 1 * 2); // 3 * j -> 3= width of phenotype,
-
-                                    if (i < (endLine - startLine) - 1) { // if not the last LINE of the input.
-                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + ",").getBytes()  );
-                                        while (b1.remaining() > 0) {
-                                            channel.write(b1, position);
-                                        }
-                                    } else { // Last line of input = last column
-                                        ByteBuffer b1 = ByteBuffer.wrap(   (partialResults[j] + "\n").getBytes()  );
-                                        while (b1.remaining() > 0) {
-                                            channel.write(b1, position);
-                                        }
-                                    }
-                                }
-
-
-
+                            for (String entry : arr) {
+                                //System.out.println("Entry:[" + entry + "]");
+                                //(inputChunk.get(i)).add(entry);
+                                (inputChunk.get(j)).add(accumulateResults(X + j, entry));
                             }
                         } else {
-                            System.out.println("Finished line:[" + i + "]");
+                            //System.out.println("Line is blank/newline only");
+                            ++offsetCorrectionFactor;
                         }
+                    } else {
+                        //System.out.println("total lines not divisible by chunksize");
+                        ++offsetCorrectionFactor;
                     }
-                    lineScanner.close();
-                } else {
-                    System.out.println("Null line:[" + i + "]");
+                } // Done reading in a chunk of input.
+
+
+
+                // Transpose the processed lines to output lists:
+
+                // The length/size of the first line is the number of lines in the output:
+                for (int j = 0; j < inputChunk.get(0).size(); ++j) { // For the number of input columns, add an output row:
+                    outputChunk.add(j, new ArrayList<Integer>());
                 }
 
+                // Transpose inputChunk to outputChunk:
+                for (int j = 0; j < inputChunk.size(); ++j) { // for the number of input rows.
+                    for (int k = 0; k < (inputChunk.get(j)).size(); ++k) { // for the number of entries on a line (input columns)
+                        (outputChunk.get(k)) .add(j, (inputChunk.get(j)).get(k));
+                    }
+                }
+
+                // Pass outputChunk to accumulator(): pass in the column (old method passed line, then transposed. We transpose then translate, so use the column and the value!)
+
+                // Write outputChunk:
+                FileOutputStream outputChunkStream = new FileOutputStream("./" + tempDir + "/" + outputFile + numberOfFilesInSeries);
+                OutputStreamWriter outputChunkWriter = new OutputStreamWriter(outputChunkStream);
+                for (int j = 0; j < outputChunk.size(); ++j) {
+                    String result = "";
+                    for (int k = 0; k < outputChunk.get(j).size(); ++k) {
+                        if (k < outputChunk.get(j).size() - 1) {
+                            result += ((outputChunk.get(j)).get(k) + ",");
+                        } else {
+                            result += ((outputChunk.get(j)).get(k) + "\n");
+                        }
+                    }
+                    outputChunkWriter.write(result);
+                }
+                outputChunkWriter.close();
+
+                ++numberOfFilesInSeries;
+
+                X += (chunkSize - offsetCorrectionFactor);
+                //System.out.println("X: " + X);
+                //System.out.println("offsetCorrectionFactor: " + offsetCorrectionFactor);
             }
-            channel.force(true); // Attempt to force writing before thread/task ends.
+
+            // Merge if there are multiple files, otherwise just rename:
+            if (numberOfFilesInSeries > 1) {
+                mergeFiles((int) (endLine - startLine), numberOfFilesInSeries, outputFilename, "./" + tempDir + "/" + outputFile);
+            } else {
+                // Rename+move file by removing "..0" and moving it out of the temp directory.
+                File originalFile = new File("./" + tempDir + "/" + outputFile + "0");
+                File newFile = new File(outputFilename);
+                boolean result = originalFile.renameTo(newFile);
+                //System.out.println("Renamed:" + result);
+            }
 
         } catch (FileNotFoundException e) {
             System.out.println("There was an error finding a file in a HmpSumTask worker.");
@@ -193,11 +201,11 @@ public class HmpToCsvTaskLarge implements Runnable {
      * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
      * @param entry  Is a character allele entry from an HMP file. Width is equal to ploidiness.
      */
-    private void accumulateResults(int lineNumber, String entry) {
+    private int accumulateResults(long lineNumber, String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {
             System.out.println("The provided entry contained no data.");
-            partialResults[lineNumber] = MISSING_DATA + 1;
-            return;
+            //partialResults[lineNumber] = MISSING_DATA + 1;
+            return (MISSING_DATA + 1);
         }
         int result = 0;
         // Compare allele to majorAllelesValues array to determine output:
@@ -211,7 +219,7 @@ public class HmpToCsvTaskLarge implements Runnable {
                      "B", "D", "H", "V", "N",
                      "b", "d", "h", "v", "n",
                      ".", "-":
-                    if (!allele.equalsIgnoreCase(majorAllelesValues[lineNumber])) {
+                    if (!allele.equalsIgnoreCase(majorAllelesValues[(int) lineNumber])) {
                         ++result;
                     }
                     break;
@@ -225,7 +233,46 @@ public class HmpToCsvTaskLarge implements Runnable {
             }
         }
         // Save result to linebuffer:
-        partialResults[lineNumber] = result;
+        //partialResults[lineNumber] = result;
+        return result;
+    }
+
+    private void mergeFiles(int lineCount, int fileCount, String resultFile, String tempName) {
+        //FileController.mergeFiles(count, resultFile, tempName);
+        try (
+            PrintWriter pw = new PrintWriter(resultFile)
+        ) {
+            // Make a list of temporary files and open them all:
+            BufferedReader[] filesToRead = new BufferedReader[fileCount];
+            for (int i = 0; i < fileCount; ++i) {
+                filesToRead[i] = new BufferedReader(new FileReader(tempName + i));
+            }
+
+            // Read in 1 line from each:
+            for (int i = 0; i < lineCount; ++i) {
+                String line = "";
+                for (int j = 0; j < fileCount; ++j) {
+                    if (j == 0) {
+                        line += ((filesToRead[j]).readLine());
+                    } else {
+                        line += ("," + (filesToRead[j]).readLine());
+                    }
+                }
+                pw.println(line);
+            }
+            pw.flush();
+
+            // Close the files:
+            for (int i = 0; i < fileCount; ++i) {
+                (filesToRead[i]).close();
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("An intermediate file appears to be missing.");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.println("There was an error attempting to access an intermediate file.");
+            e.printStackTrace();
+        }
     }
 
 }

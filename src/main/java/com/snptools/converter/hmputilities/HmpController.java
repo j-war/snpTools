@@ -1,20 +1,20 @@
 package com.snptools.converter.hmputilities;
 
-import com.snptools.converter.fileutilities.FileController;
-import com.snptools.converter.fileutilities.NormalizeInputTask;
-
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Scanner;
+import java.util.TreeMap;
+
+import com.snptools.converter.fileutilities.FileController;
+import com.snptools.converter.fileutilities.NormalizeInputTask;
 
 /**
  * The HmpController class directs the conversion of an .hmp text file into a .csv output file
@@ -94,18 +94,16 @@ public class HmpController {
         calculateMajors();
         //printIntermediateData();
 
-        // If the file is "large", use the 'large' method:
+        // If the file is "large", use the 'large' methods:
         if (totalInputLines >= 2500 || totalInputColumns >= 250) {
-            System.out.println("Large input file detected.\n");
+            System.out.println("\nLarge input file detected.\n");
             convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
-            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
+            mergeFilesLines(totalInputColumns - NUMBER_OF_HEADER_COLUMNS, NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
         } else { // Else, the file is "small", use the default method:
             convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
             mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
         }
-//cleanupall?
-        //cleanUp(); // Attempt to delete temporary files.
-
+        cleanUpAll(); // Attempt to delete temporary files and folders.
     }
 
     public void startHmpToVcf() {
@@ -374,6 +372,7 @@ public class HmpController {
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
+                /*
                 System.out.println("Controller report:");
                 System.out.println("NormalizeWorker[" + (i) + "]");
                 System.out.println("hmpFileName[" + (hmpFileName) + "]");
@@ -384,6 +383,7 @@ public class HmpController {
                 System.out.println("numberOfColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
                 System.out.println("columnWidth[" + (hmpPloidiness) + "]");
                 System.out.println("End controller report.\n");
+                */
                 normalizePool[i] = new NormalizeInputTask(
                     hmpFileName,
                     outputFileName + TEMP_FILE_NAME + i,
@@ -421,6 +421,7 @@ public class HmpController {
             // Create task and add it to both pools and then start it immediately.
             // Split work evenly, give threads start and end lines
             for (int i = 0; i < workers; ++i) {
+                /*
                 System.out.println("Controller report:");
                 System.out.println("HmpSumTask[" + (i) + "]");
                 System.out.println("inputFileName[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
@@ -428,6 +429,7 @@ public class HmpController {
                 System.out.println("endLine[" + ((((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers)) + "]");
                 System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
                 System.out.println("End controller report.\n");
+                */
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 sumPool[i] = new HmpSumTask(
                     outputFileName + TEMP_FILE_NAME + i,
@@ -665,7 +667,7 @@ public class HmpController {
             resultsPool = new HmpToCsvTask[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-
+                /*
                 System.out.println("Controller report:");
                 System.out.println("HmpToCsvTask[" + (i) + "]");
                 System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
@@ -677,7 +679,7 @@ public class HmpController {
                 System.out.println("majorAllelesValues[array]");
                 System.out.println("ploidiness[" + (hmpPloidiness) + "]");
                 System.out.println("End controller report.\n");
-
+                */
 
                 // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTask(
@@ -709,7 +711,7 @@ public class HmpController {
             resultsPool = new HmpToCsvTaskLarge[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-
+/*
                 System.out.println("Controller report:");
                 System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
                 System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
@@ -721,20 +723,21 @@ public class HmpController {
                 System.out.println("majorAllelesValues[array]");
                 System.out.println("ploidiness[" + (hmpPloidiness) + "]");
                 System.out.println("End controller report.\n");
-
+*/
 
                 // (i * lines / arg), (((1 + i) * lines) / arg)
+//HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues)
                 resultsPool[i] = new HmpToCsvTaskLarge(
                     outputFileName + TEMP_FILE_NAME + i,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
-                    (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
-                    ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
-                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                    totalInputLines - NUMBER_OF_HEADER_LINES,
-                    majorAllelesValues,
-                    hmpPloidiness
+                    (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers), // startColumn
+                    ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers), // endColumn
+                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS, // totalColumns
+                    totalInputLines - NUMBER_OF_HEADER_LINES, // totalLines
+                    majorAllelesValues, // majorAlleles
+                    i // the portion of the total data it will work on.
                 );
                 threadPool[i] = new Thread(resultsPool[i]);
                 threadPool[i].start();
@@ -836,8 +839,19 @@ public class HmpController {
      * 
      * Note: Will overwrite existing data with no warning or prompts.
      */
-    private void mergeFiles(int count, String resultFile, String tempName) {
-        FileController.mergeFiles(count, resultFile, tempName);
+    private void mergeFiles(int fileCount, String resultFile, String tempName) {
+        FileController.mergeFiles(fileCount, resultFile, tempName);
+    }
+    
+    /**
+     * Merges the lines of the files sequentially and writes the result to an output file.
+     * @param lineCount The number of data lines that the files contain.
+     * @param fileCount The number of files in the series.
+     * @param resultFile    The output file name with path and with an extension.
+     * @param tempName  The intermediate file containing its appendix, file path, and an extension.
+     */
+    private void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) {
+        FileController.mergeFilesLines(lineCount, fileCount, resultFile, tempName);
     }
 
     /**
@@ -859,8 +873,9 @@ public class HmpController {
      */
     private void cleanUpAll() {
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME); // Delete stage 1 files.
-        FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        //FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME_2ND); // Delete stage 2 files.
+        FileController.deleteTempFolders(NUMBER_OF_WORKERS, outputFileName);
     }
 
     // Debug helper:
