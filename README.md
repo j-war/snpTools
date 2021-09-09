@@ -17,9 +17,15 @@ The general flow of conversion works as follows:
 * merge results
 * cleanup temporary files
 
+<b>Always check the terminal for warnings before using results.</b>
+
+Always make sure the output is a rectangular matrix. You may need to use a variety of unix commands to check this on large files.
+
 ***
 # Requirements:
-* Quad-core CPU, 8gb RAM, ssd
+* Quad-core CPU, 8gb RAM minimum, ssd
+
+* 3-4 times the input file's size in free disk available
 
 * Java 16.0.2
 
@@ -217,7 +223,8 @@ The HMP to CSV conversion is more involved than the previous modes. The HMP is c
 
 The two stage conversion will proceed as follows:
 * Stage 1 will consist of a summation strategy similar to step 1 of the PED conversion.
-* Stage 2 will consist of a comparison strategy similar to step 2 of the VCF conversion.
+* Stage 2 will consist of a comparison strategy similar to step 2 of the VCF to CSV conversion.
+* Stage 3 merges the chunks line by line after the transpose has been completed.
 
 ### A normalized .hmp file (with file and line headers removed):
 ![hmpfile](Docs/Hmp.png)
@@ -306,6 +313,18 @@ This program assumes the input files are well-formed, however some formatting er
 
 However, if the expected file constraints, such as line length being inconsistent, then the program may attempt to exit.
 
-<b>Caveat:</b> Some malformed files may still have an output file generated - please check the console before using the output results.
+<u><b>Caveat:</b></u> Some malformed files may still have an output file generated - please check the console before using the output results.
+
+Make sure the output is a rectangular matric - jaggedness likely means there was an undetected error in the input. It may have invalid character data or encoding.
+
+Results may continue to be generated even from 'bad' input.
+
+Silent failures may occur if you have certain security managers set or there are permission problems. Please make sure you have read/write/execute on all of the folders and files.
+
+The program will need 3-4 times the input file's size available for staging. For example: if your input file is 7gb then up to 28gb will be required. The program will attempt to delete the temporary files and folders if the program successfully completes.
+
+If the temporary files remain then the final result may be incomplete due to lack of disk space.
+
+Partial results may be used if you're careful and understand how this program works while checking the output log. Except in the case of a "java.lang.OutOfMemoryError: Java heap space" exception leading to missing file exceptions. The state cannot be guaranteed and results should be discarded and chunkSize in HmpToCsvTaskLarge/VcfToCsvTaskLarge decreased.
 
 ***

@@ -52,12 +52,14 @@ public class HmpToCsvTaskLarge implements Runnable {
      * 
      * @param inputFilename The input file path and file name and an extension for processing.
      * @param outputFilename    The  The output file path and file name with an extension for processing.
-     * @param startColumn   The column for this worker to start at.
+     * @param startLine   The start line for this worker to start at.
+     * @param endLine The end line for this worker to finish at.
+     * @param startColumn The column for this worker to finish at.
      * @param endColumn The column for this worker to finish at.
      * @param totalColumns  The number of columns this worker should process.
      * @param totalLines    The total number of lines to process.
      * @param majorAllelesValues    A reference to the previously calculated major allleles.
-     * @param ploidiness    The width of the data entries representing the ploidiness of the data.
+     * @param portion    The worker number assigned to this chunk of the output.
      */
     public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int portion) {
         this.inputFilename = inputFilename;
@@ -79,7 +81,7 @@ public class HmpToCsvTaskLarge implements Runnable {
             int numberOfFilesInSeries = 0;
             long X = startLine;
             long Y = endLine;
-            int chunkSize = 1000; // Tuning parameter.
+            int chunkSize = 512; // Tuning parameter: 1500+ with 4 workers and 8gb will likely throw OOM, ~250 was slower that 500.
 
             // Create temp folder - assume we will need folders:
             Path outputFolder = Paths.get(outputFilename).getParent().normalize();
@@ -123,7 +125,7 @@ public class HmpToCsvTaskLarge implements Runnable {
                 // Transpose inputChunk to outputChunk:
                 for (int j = 0; j < inputChunk.size(); ++j) { // for the number of input rows.
                     for (int k = 0; k < (inputChunk.get(j)).size(); ++k) { // for the number of entries on a line (input columns)
-                        (outputChunk.get(k)) .add(j, (inputChunk.get(j)).get(k));
+                        (outputChunk.get(k)) .add(j, (inputChunk.get(j)).get(k)); // Do NOT catch potential OOM.
                     }
                 }
 
@@ -155,7 +157,7 @@ public class HmpToCsvTaskLarge implements Runnable {
                 try {
                     mergeFilesLines((int) totalColumns, numberOfFilesInSeries, outputFilename, "./" + tempDir + "/" + outputFile);
                 } catch (IOException e) {
-                    throw new RuntimeException("");
+                    throw new RuntimeException("Error: Disk is likely full.");
                 }
             } else {
                 // Rename+move file by removing "..0" and moving it out of the temp directory.

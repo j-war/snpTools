@@ -20,7 +20,7 @@ import com.snptools.converter.fileutilities.NormalizeInputTask;
  * The HmpController class directs the conversion of an .hmp text file into a .csv output file
  * or an .hmp text file into a .vcf output file.
  * @author  Jeff Warner
- * @version 1.1, July 2021
+ * @version 1.2, September 2021
  */
 public class HmpController {
 
@@ -95,7 +95,7 @@ public class HmpController {
         //printIntermediateData();
 
         // If the file is "large", use the 'large' methods:
-        if (totalInputLines >= 2500 || totalInputColumns >= 250) {
+        if (totalInputLines >= 2500 || totalInputColumns >= 250) { // Arbitrary values.
             System.out.println("\nLarge input file detected.\n");
             convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
             try {
