@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.snptools.converter.fileutilities.DiskFullException;
 import com.snptools.converter.fileutilities.FileController;
 
 /**
@@ -42,6 +43,8 @@ public class HmpToCsvTaskLarge implements Runnable {
     private final int portion; // The portion of the total data that this worker is working on.
 
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
+
+    volatile private int numberOfFilesInSeries = 0;
 
 
     /**
@@ -78,7 +81,6 @@ public class HmpToCsvTaskLarge implements Runnable {
         try (
             BufferedReader reader = new BufferedReader(new FileReader(inputFilename));
         ) {
-            int numberOfFilesInSeries = 0;
             long X = startLine;
             long Y = endLine;
             int chunkSize = 512; // Tuning parameter: 1500+ with 4 workers and 8gb will likely throw OOM, ~250 was slower that 500.
@@ -87,7 +89,7 @@ public class HmpToCsvTaskLarge implements Runnable {
             Path outputFolder = Paths.get(outputFilename).getParent().normalize();
             Path outputFile = Paths.get(outputFilename).getFileName();
             File tempDir = new File(outputFolder.toString() + "/temp" + portion + "/");
-            if (!tempDir.exists()){
+            if (!tempDir.exists()) {
                 tempDir.mkdir();
             } // else { System.out.println("Temp directory already exists."); }
 
@@ -151,23 +153,8 @@ public class HmpToCsvTaskLarge implements Runnable {
 
                 X += (chunkSize - offsetCorrectionFactor);
             }
-
-            // Merge if there are multiple files, otherwise just rename and move it:
-            if (numberOfFilesInSeries > 1) {
-                try {
-                    mergeFilesLines((int) totalColumns, numberOfFilesInSeries, outputFilename, "./" + tempDir + "/" + outputFile);
-                } catch (IOException e) {
-                    throw new RuntimeException("Error: Disk is likely full.");
-                }
-            } else {
-                // Rename+move file by removing "..0" and moving it out of the temp directory.
-                File originalFile = new File("./" + tempDir + "/" + outputFile + "0");
-                File newFile = new File(outputFilename);
-                boolean result = originalFile.renameTo(newFile);
-                //System.out.println("Renamed:" + result);
-            }
         } catch (FileNotFoundException e) {
-            System.out.println("There was an error finding a file in a HmpSumTask worker.");
+            System.out.println("There was an error finding a file in a HmpToCsvTaskLarge worker.");
             e.printStackTrace();
         } catch (IOException e) {
             System.out.println("There was a problem accessing the intermediate file.");
@@ -221,15 +208,11 @@ public class HmpToCsvTaskLarge implements Runnable {
     }
 
     /**
-     * Merges the lines of the files sequentially and writes the result to an output file.
-     * @param lineCount The number of data lines that the files contain.
-     * @param fileCount The number of files in the series.
-     * @param resultFile    The output file name with path and with an extension.
-     * @param tempName  The intermediate file containing its appendix, file path, and an extension.
-     * @throws IOException  If the print writer experiences an error such as a full disk.
+     * Returns the number of files that make up results.
+     * @return  The number of files in this workers' series.
      */
-    private void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws IOException {
-        FileController.mergeFilesLines(lineCount, fileCount, resultFile, tempName);
+    public int getNumberOfFilesInSeries() {
+        return numberOfFilesInSeries;
     }
 
 }

@@ -23,6 +23,9 @@ Always make sure the output is a rectangular matrix. You may need to use a varie
 
 ***
 # Requirements:
+
+* macOS or Unix
+
 * Quad-core CPU, 8gb RAM minimum, ssd
 
 * 3-4 times the input file's size in free disk available
@@ -109,13 +112,13 @@ java -cp Converter DataInput
     OutputFolder/ ...
     target/ ...
     Docs/ ...
-    src/test/ ...
+    src/test/ ... (Similar to src/main/)
     src/main/
         |
         resources/ ...
         java/com/snptools/converter/
                               |
-                              DataInput.java (main entry)
+                              DataInput.java (Main entry)
                               |
                               fileutilities/
                               |       |

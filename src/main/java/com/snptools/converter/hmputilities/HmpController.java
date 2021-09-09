@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 
+import com.snptools.converter.fileutilities.DiskFullException;
 import com.snptools.converter.fileutilities.FileController;
 import com.snptools.converter.fileutilities.NormalizeInputTask;
 
@@ -97,25 +98,11 @@ public class HmpController {
         // If the file is "large", use the 'large' methods:
         if (totalInputLines >= 2500 || totalInputColumns >= 250) { // Arbitrary values.
             System.out.println("\nLarge input file detected.\n");
-            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
-            try {
-                mergeFilesLines(totalInputColumns - NUMBER_OF_HEADER_COLUMNS, NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-                cleanUpAll(); // Attempt to delete temporary files and folders.
-            } catch (IOException e) {
-                System.out.println("Error: An IOException occurred - the disk may be full.");
-                System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
-                e.printStackTrace();
-            }
+            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
         } else { // Else, the file is "small", use the default method:
             convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
-            try {
-                mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);// Writes the final output.
-                cleanUpAll(); // Attempt to delete temporary files and folders.
-            } catch (IOException e) {
-                System.out.println("Error: An IOException occurred - the disk may be full.");
-                System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
-                e.printStackTrace();
-            }
+            //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
+            //cleanUpAll(); // Attempt to delete temporary files and folders.
         }
     }
 
@@ -160,11 +147,11 @@ public class HmpController {
         String intermediateFile = outputFileName + TEMP_FILE_NAME;
         try {
             mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
-        } catch (IOException e) {
+        } catch (DiskFullException e) {
             System.out.println("Error: An IOException occurred - the disk may be full.");
             System.out.println("\nWarning: Results are invalid.\n");
             e.printStackTrace();
-        } // Merge the files into a single temp file.
+        }
 
         processInputThreaded(NUMBER_OF_WORKERS); // Sum frequencies.
 
@@ -186,9 +173,9 @@ public class HmpController {
         try {
             mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
             cleanUpAll(); // Attempt to delete temporary files.
-        } catch (IOException e) {
+        } catch (DiskFullException e) {
             System.out.println("Error: An IOException occurred - the disk may be full.");
-            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            System.out.println("\nWarning: Partial results are available but may not be valid.\n");
             e.printStackTrace();
         }
     }
@@ -736,22 +723,6 @@ public class HmpController {
             resultsPool = new HmpToCsvTaskLarge[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-/*
-                System.out.println("Controller report:");
-                System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
-                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
-                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
-                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("majorAllelesValues[array]");
-                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
-                System.out.println("End controller report.\n");
-*/
-
-                // (i * lines / arg), (((1 + i) * lines) / arg)
-//HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues)
                 resultsPool[i] = new HmpToCsvTaskLarge(
                     outputFileName + TEMP_FILE_NAME + i,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
@@ -765,12 +736,7 @@ public class HmpController {
                     i // the portion of the total data it will work on.
                 );
                 threadPool[i] = new Thread(resultsPool[i]);
-                try {
-                    threadPool[i].start();
-                } catch (RuntimeException e) {
-                    System.out.println("\nWarning: There was a problem merging results in worker[" + i + "] - the disk may be full. Partial results are available but may not be valid.");
-                    System.out.println("\nRecommended: Re-run the program after clearing space on your disk - there should be at least x3-4 the size of the input file available.");
-                }
+                threadPool[i].start();
             }
             for (int i = 0; i < workers; ++i) {
                 try {
@@ -780,6 +746,46 @@ public class HmpController {
                     e.printStackTrace();
                 }
             }
+
+            // Check that the workers completed tasks and merge their results:
+            for (int i = 0; i < workers; ++i) {
+                int pieces = ((HmpToCsvTaskLarge)resultsPool[i]).getNumberOfFilesInSeries();
+                try {
+                    FileController.mergeFilePieces(
+                        (totalInputColumns - NUMBER_OF_HEADER_COLUMNS),
+                        pieces, // Number of files in the series.
+                        outputFileName + TEMP_FILE_NAME_2ND, // result file
+                        i // the portion/worker number
+                    );
+                    // Race condition here.
+                    
+                    try {
+                        FileController.mergeFilesLines(
+                            totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                            NUMBER_OF_WORKERS,
+                            outputFileName,
+                            outputFileName + TEMP_FILE_NAME_2ND
+                        );
+                        /*mergeFilesLines(
+                            totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                            NUMBER_OF_WORKERS,
+                            outputFileName,
+                            outputFileName + TEMP_FILE_NAME_2ND
+                        );*/
+                        //cleanUpAll(); // Attempt to delete temporary files and folders.
+                    } catch (DiskFullException e) {
+                        System.out.println("Error: The disk appears to be full. However, partial results are available.");
+                        System.out.println("Use with caution.");
+                        System.out.println("Partial results available at:");
+                        for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
+                            System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
+                        }
+                    }
+                } catch (DiskFullException e) {
+                    System.out.println("Error: The disk appears to be full. However, partial results are available.");
+                }
+            }
+
         }
     }
 
@@ -866,13 +872,11 @@ public class HmpController {
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and with an extension.
      * @param tempName  The intermediate file containing its appendix, file path, and an extension.
-     * @throws IOException  If the print writer experiences an error such as a full disk.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
-     * 
-     * Note: Propagate the IOException to main loop to determine if cleanup should take place.
      */
-    private void mergeFiles(int fileCount, String resultFile, String tempName) throws IOException {
+    private void mergeFiles(int fileCount, String resultFile, String tempName) throws DiskFullException {
         FileController.mergeFiles(fileCount, resultFile, tempName);
     }
     
@@ -882,14 +886,11 @@ public class HmpController {
      * @param fileCount The number of files in the series.
      * @param resultFile    The output file name with path and with an extension.
      * @param tempName  The intermediate file containing its appendix, file path, and an extension.
-     * @throws IOException  If the print writer experiences an error such as a full disk.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
-     * 
-     * Note: Propagate the IOException to main loop to determine if cleanup should take place.
-     *       Do not call cleanUp()/cleanUpAll() in order to retain partial results.
      */
-    private void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws IOException {
+    private void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws DiskFullException {
         FileController.mergeFilesLines(lineCount, fileCount, resultFile, tempName);
     }
 

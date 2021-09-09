@@ -113,11 +113,11 @@ public class FileController {
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The path containing the name of the resultant file.
      * @param inputName The path containing the file name, with an extension.
-     * @throws IOException  If the print writer experiences an error such as a full disk.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite files, permissions allowing, without warning.
      */
-    public static void mergeFiles(int count, String resultFile, String inputName) throws IOException {
+    public static void mergeFiles(int count, String resultFile, String inputName) throws DiskFullException {
         try (
             PrintWriter pw = new PrintWriter(resultFile)
         ) {
@@ -133,7 +133,7 @@ public class FileController {
             }
             pw.flush();
             if (pw.checkError()) {
-                throw new IOException("Error: An IOException occurred while merging files - the disk may be full.");
+                throw new DiskFullException("Error: An IOException occurred while merging files - the disk may be full.");
             }
         } catch (FileNotFoundException e) {
             System.out.println("An intermediate file appears to be missing.");
@@ -144,52 +144,87 @@ public class FileController {
         }
     }
 
-
     /**
      * Merges the lines of the series of files into a resultant file.
      * @param lineCount The number of data lines that each file contains.
      * @param fileCount The number of files in the series.
      * @param resultFile    The output location of the merged files with filename and extension.
      * @param tempName  The file path with extension of the files to be merged.
-     * @throws IOException  If the print writer experiences an error such as a full disk.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      */
-    public static void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws IOException {
+    public static void mergeFilesLines(int lineCount, int fileCount, String resultFile, String tempName) throws DiskFullException {
         try (
             PrintWriter pw = new PrintWriter(resultFile)
         ) {
-            // Make a list of temporary files and open them all:
-            BufferedReader[] filesToRead = new BufferedReader[fileCount];
-            for (int i = 0; i < fileCount; ++i) {
-                filesToRead[i] = new BufferedReader(new FileReader(tempName + i));
-            }
-
-            // Read in 1 line from each:
-            for (int i = 0; i < lineCount; ++i) {
-                String line = "";
-                for (int j = 0; j < fileCount; ++j) {
-                    if (j == 0) {
-                        line += ((filesToRead[j]).readLine());
-                    } else {
-                        line += ("," + (filesToRead[j]).readLine());
-                    }
+            // Make a thread and then wait on it
+            //synchronized (this) {
+                // Make a list of temporary files and open them all:
+                BufferedReader[] filesToRead = new BufferedReader[fileCount];
+                for (int i = 0; i < fileCount; ++i) {
+                    filesToRead[i] = new BufferedReader(new FileReader(tempName + i));
                 }
-                pw.println(line);
-            }
-            pw.flush();
+                // Read in 1 line from each:
+                for (int i = 0; i < lineCount; ++i) {
+                    String line = "";
+                    for (int j = 0; j < fileCount; ++j) {
+                        if (j == 0) {
+                            line += ((filesToRead[j]).readLine());
+                        } else {
+                            line += ("," + (filesToRead[j]).readLine());
+                        }
+                    }
+                    pw.println(line);
+                }
+                pw.flush();
 
-            // Close the files:
-            for (int i = 0; i < fileCount; ++i) {
-                (filesToRead[i]).close();
-            }
-            if (pw.checkError()) {
-                throw new IOException("Error: An IOException occurred while merging files - the disk may be full.");
-            }
+                // Close the files:
+                for (int i = 0; i < fileCount; ++i) {
+                    (filesToRead[i]).close();
+                }
+                if (pw.checkError()) {
+                    throw new DiskFullException("Error: An IOException occurred while merging files - the disk may be full.");
+                }
+            //}
         } catch (FileNotFoundException e) {
             System.out.println("An intermediate file appears to be missing.");
             e.printStackTrace();
         } catch (IOException e) {
             System.out.println("There was an error attempting to access an intermediate file.");
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Merges the lines of the series of files into a resultant file.
+     * @param lineCount The number of data lines that each file contains.
+     * @param fileCount The number of files in the series.
+     * @param resultFile    The output location of the merged files with filename and extension.
+     * @param portion   The portion of the data that should be merged together with.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
+     */
+    public static void mergeFilePieces(int lineCount, int fileCount, String resultFile, int portion) throws DiskFullException {
+        // Merge if there are multiple files, otherwise just rename and move it:
+        Path outputFolder = Paths.get(resultFile + portion).getParent().normalize();
+        Path outputFile = Paths.get(resultFile + portion).getFileName();
+        File tempDir = new File(outputFolder.toString() + "/temp" + portion + "/");
+        if (fileCount > 1) {
+            mergeFilesLines(
+                lineCount,
+                fileCount,
+                (resultFile + portion),
+                "./" + tempDir + "/" + outputFile
+            );
+        } else {
+            try {
+                // Rename+move file by removing "...0" and moving it out of the temp directory.
+                File originalFile = new File("./" + tempDir + "/" + (resultFile + portion) + "0");
+                File newFile = new File(resultFile + portion);
+                boolean result = originalFile.renameTo(newFile);
+                //System.out.println("Renamed:" + result);
+            } catch (NullPointerException e) {
+                // Ignore.
+                //System.out.println("No files to move.");
+            }
         }
     }
 
@@ -261,7 +296,7 @@ public class FileController {
 
     /**
      * Recursively deletes all files and folders while avoiding symbolic links.
-     * @param file  The folder its content to be deleted.
+     * @param folderToDelete  The folder its content to be deleted.
      * 
      * Note: May not work with certain security settings.
      */

@@ -106,7 +106,7 @@ public class FileControllerTest {
         );
         try {
             FileController.mergeFiles(FILE_COUNT, TEST_OUTPUT_PED, TEST_OUTPUT_PED);
-        } catch (IOException e) {
+        } catch (DiskFullException e) {
             System.out.println("There was an error while running tests - disk may be full.");
         }
         // Check that the file exists after merge,
