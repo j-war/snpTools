@@ -95,15 +95,45 @@ public class HmpController {
         calculateMajors();
         //printIntermediateData();
 
+        convertHmpToCsv();
+    }
+
+    private void convertHmpToCsv() {
         // If the file is "large", use the 'large' methods:
         if (totalInputLines >= 2500 || totalInputColumns >= 250) { // Arbitrary values.
             System.out.println("\nLarge input file detected.\n");
-            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
-        } else { // Else, the file is "small", use the default method:
-            convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
-            //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-            //cleanUpAll(); // Attempt to delete temporary files and folders.
         }
+            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
+            try {
+                FileController.mergeFilesLines(
+                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                    NUMBER_OF_WORKERS,
+                    outputFileName,
+                    outputFileName + TEMP_FILE_NAME_2ND
+                );
+                cleanUpAll(); // Attempt to delete temporary files and folders.
+            } catch (DiskFullException e) {
+                System.out.println("Error: The disk appears to be full. However, partial results are available.");
+                System.out.println("Use with caution.");
+                System.out.println("Partial results available at:");
+                for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
+                    System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
+                }
+            }
+        /* else { // Else, the file is "small", use the default method:
+            convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
+            try {
+                mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
+                cleanUpAll(); // Attempt to delete temporary files and folders.
+            } catch (DiskFullException e) {
+                System.out.println("Error: The disk appears to be full. However, partial results are available.");
+                System.out.println("Use with caution.");
+                System.out.println("Partial results available at:");
+                for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
+                    System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
+                }
+            }
+        }*/
     }
 
     public void startHmpToVcf() {
@@ -679,23 +709,8 @@ public class HmpController {
             resultsPool = new HmpToCsvTask[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-                /*
-                System.out.println("Controller report:");
-                System.out.println("HmpToCsvTask[" + (i) + "]");
-                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
-                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
-                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("majorAllelesValues[array]");
-                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
-                System.out.println("End controller report.\n");
-                */
-
-                // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTask(
-                    outputFileName + TEMP_FILE_NAME,
+                    outputFileName + TEMP_FILE_NAME + i,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
                     ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
@@ -757,35 +772,10 @@ public class HmpController {
                         outputFileName + TEMP_FILE_NAME_2ND, // result file
                         i // the portion/worker number
                     );
-                    // Race condition here.
-                    
-                    try {
-                        FileController.mergeFilesLines(
-                            totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                            NUMBER_OF_WORKERS,
-                            outputFileName,
-                            outputFileName + TEMP_FILE_NAME_2ND
-                        );
-                        /*mergeFilesLines(
-                            totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                            NUMBER_OF_WORKERS,
-                            outputFileName,
-                            outputFileName + TEMP_FILE_NAME_2ND
-                        );*/
-                        //cleanUpAll(); // Attempt to delete temporary files and folders.
-                    } catch (DiskFullException e) {
-                        System.out.println("Error: The disk appears to be full. However, partial results are available.");
-                        System.out.println("Use with caution.");
-                        System.out.println("Partial results available at:");
-                        for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
-                            System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
-                        }
-                    }
                 } catch (DiskFullException e) {
                     System.out.println("Error: The disk appears to be full. However, partial results are available.");
                 }
             }
-
         }
     }
 
