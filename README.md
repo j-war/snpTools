@@ -19,7 +19,7 @@ The general flow of conversion works as follows:
 
 <b>Always check the terminal for warnings before using results.</b>
 
-Always make sure the output is a rectangular matrix. You may need to use a variety of unix commands to check this on large files.
+Always make sure the output is a rectangular matrix. You may need to use a variety of unix commands to verify this on large files.
 
 ***
 # Requirements:
@@ -38,31 +38,46 @@ Always make sure the output is a rectangular matrix. You may need to use a varie
 
 ***
 # Compilation and running:
-File names as input arguments should be relative and have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
+A simple maven build+test and run script is provided for convenience as well as basic build and run scripts.
+The maven script assumes you have mvn properly installed and both assume you have java installed as well.
+All scripts should be run from the root directory: `snpTools/`. 
 
-## Compiling:
+Only run `build.sh` script once. If you need to run it again, delete the contents of `snpTools/build/` first.
+
+You can call the run script multiple times but beware that the program <b>WILL</b> overwrite and/or delete files in `snpTools/OutputFolder/` without warning.
+
+Make sure there is an empty `snpTools/build/` folder created before using the `build.sh` script.
+
+File names as input arguments should be relative and have file extensions and should be in the `snpTools/InputFolder/`. You should also create a folder named `snpTools/OutputFolder/` beside it before running.
+
+
+## Compiling with Maven:
+From `snpTools/`.
 ```
 mvn package
 ```
 or:
 ```
-javac -d [Destination directory relative to current directory] Main.java
+zsh ./mvnbuildtest.sh
 ```
 
-Examples:
+## Compiling without Maven:
+From `snpTools/` - clear `build/` if you need to run this again.
+
 ```
-javac -d ./Converter DataInput.java
-javac -d Converter DataInput.java
+zsh ./build.sh
 ```
 
-## Running:
+## Running with Maven:
 ```
-java -cp target/converter-1.0.jar com.snptools.converter.DataInput [mode] [./InputFolder/biodata.hmp] [./OutputFolder/biodataOut.vcf]
+zsh ./mvnrun.sh 1 ./InputFolder/biodata.hmp ./OutputFolder/biodataOut.vcf
 ```
-or:
+
+## Running without Maven:
 ```
-java -cp [Classpath directory] Main [mode] [Relative input filepath with an extension] [Relative output filepath with an extension]
+zsh ./run.sh 1 ./InputFolder/biodata.hmp ./OutputFolder/biodataOut.vcf
 ```
+
 Supported modes are shown below:
 |Mode value|Result|
 |------|------|
@@ -80,33 +95,16 @@ java -cp Converter DataInput 0 InputFolder/mdp_genotype.plk OutputFolder/OutputP
 ```
 
 
-## Compiling and running:
-Examples:
+
+Folder structure:
 ```
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 0 ./InputFolder/mdp_genotype.plk ./OutputFolder/OutputPed
-
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 1 ./InputFolder/mdp_genotype ./OutputFolder/OutputVcf
-
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 2 ./InputFolder/mdp_genotype ./OutputFolder/OutputHmp
-```
-
-Or:
-```
-javac -d Converter DataInput.java && java -cp Converter DataInput 0 InputFolder/mdp_genotype.plk OutputFolder/OutputPed
-
-javac -d Converter DataInput.java && java -cp Converter DataInput 1 InputFolder/mdp_genotype OutputFolder/OutputVcf
-
-javac -d Converter DataInput.java && java -cp Converter DataInput 2 InputFolder/mdp_genotype OutputFolder/OutputHmp
-```
-
-
-Folders:
-```
-java -cp Converter DataInput
-
 ~/snpTools/
     |
     pom.xml
+    mvnbuildtest.sh
+    mvnrun.sh
+    build.sh
+    run.sh
     README.MD
     InputFolder/ ...
     OutputFolder/ ...
@@ -145,7 +143,7 @@ java -cp Converter DataInput
 
 ```
 
-Input files are expected to reside in the folder named `InputFolder` that appears beside the `Converter` folder. The output results will appear in the folder `OutputFolder` that is beside `Converter` as well.
+Input files are expected to reside in the folder named `snpTools/InputFolder/`. The output results will appear in the folder `snpTools/OutputFolder/`. Both should be created before running the program.
 
 # Details on Modes:
 ## PED to CSV Conversion:
@@ -308,9 +306,19 @@ The data entries will only include genotype data when using this mode.
 
 
 ***
-## Troubleshooting:
+## Troubleshooting and warnings:
 
 Check the console output log for additional information.
+
+### Permision errors:
+#### Option 1 - enable execute permissions on the script:
+```
+chmod u+x mvnbuildtest.sh
+```
+#### Option 2 - get another shell to run it:
+```
+zsh ./mvnbuildtest.sh
+```
 
 This program assumes the input files are well-formed, however some formatting errors are recoverable. In cases where the data can be skipped a default "no data" entry will be substituted instead and you will receive a message in the console.
 
