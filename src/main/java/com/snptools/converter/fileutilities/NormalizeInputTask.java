@@ -48,6 +48,7 @@ public class NormalizeInputTask implements Runnable {
         this.partialResults = new String[numberOfColumns];
     }
 
+    @Override
     public void run() {
         try (
             BufferedReader reader = new BufferedReader(new FileReader(inputFilenameWithExt));

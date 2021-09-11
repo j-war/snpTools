@@ -61,6 +61,7 @@ public class HmpToVcfTask implements Runnable {
         this.partialResults = new String[totalColumns];
     }
 
+    @Override
     public void run() {
         try (
             RandomAccessFile randomAccessFile = new RandomAccessFile(inputFilename, "r");

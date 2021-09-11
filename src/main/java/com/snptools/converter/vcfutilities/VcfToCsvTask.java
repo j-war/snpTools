@@ -54,6 +54,7 @@ public class VcfToCsvTask implements Runnable {
         this.partialResults = new int[totalLines];
     }
 
+    @Override
     public void run() {
         try (
             RandomAccessFile randomAccessFile = new RandomAccessFile(inputFilename, "r");

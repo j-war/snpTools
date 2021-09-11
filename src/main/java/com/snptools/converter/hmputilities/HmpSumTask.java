@@ -59,6 +59,7 @@ public class HmpSumTask implements Runnable {
         }
     }
 
+    @Override
     public void run() {
         // 1. Open file and initTotals.
         // 2. Skip to appropriate startLine

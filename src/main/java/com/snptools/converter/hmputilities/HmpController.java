@@ -99,27 +99,27 @@ public class HmpController {
     }
 
     private void convertHmpToCsv() {
-        // If the file is "large", use the 'large' methods:
         if (totalInputLines >= 2500 || totalInputColumns >= 250) { // Arbitrary values.
             System.out.println("\nLarge input file detected.\n");
         }
-            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
-            try {
-                FileController.mergeFilesLines(
-                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                    NUMBER_OF_WORKERS,
-                    outputFileName,
-                    outputFileName + TEMP_FILE_NAME_2ND
-                );
-                cleanUpAll(); // Attempt to delete temporary files and folders.
-            } catch (DiskFullException e) {
-                System.out.println("Error: The disk appears to be full. However, partial results are available.");
-                System.out.println("Use with caution.");
-                System.out.println("Partial results available at:");
-                for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
-                    System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
-                }
+        convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
+        try {
+            FileController.mergeFilesLines(
+                totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                NUMBER_OF_WORKERS,
+                outputFileName,
+                outputFileName + TEMP_FILE_NAME_2ND
+            );
+            cleanUpAll(); // Attempt to delete temporary files and folders.
+        } catch (DiskFullException e) {
+            System.out.println("Error: The disk appears to be full. However, partial results are available.");
+            System.out.println("Use with caution.");
+            System.out.println("Partial results available at:");
+            for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
+                System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
             }
+        }
+        // Misaligned output: don't use
         /* else { // Else, the file is "small", use the default method:
             convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
             try {

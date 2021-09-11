@@ -211,8 +211,9 @@ Records in VCF files contain a list of SNPs where the first entry is the major a
 <b>Note:</b> The seperator can be '/' or '\|' for phased or unphased data.
 The output rules are similar to the PED to CSV conversion with the exception that only diploid cells are supported and any missing data recieves an output of 5 versus 4 or 5 in the former.
 
+Also note that when going from VCF to CSV that the VCF format specifies '.' as 'missing' data and will appear as a 4 or 5 in the resulting CSV file.
 
-
+Contrasting with HMP to CSV, that the HMP format may use 'N' where VCF used '.'. This resulting CSV will have a 0, 1, or 2 instead. Even though the original data source was the same, the file format type passed to this program matters.
 
 
 
