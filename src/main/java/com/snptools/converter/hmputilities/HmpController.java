@@ -27,7 +27,7 @@ public class HmpController {
 
     private volatile String hmpFileName = "./input.hmp"; // The input file name with path and extension.
     private volatile String outputFileName = "./output.csv"; // The output file name with path and extension.
-    private final String TEMP_FILE_NAME = "TEMP"; // File name appendix for stage 1.
+    private final String TEMP_FILE_NAME = "TEMP"; // File name appendix for stage 1 - normalized.
     private final String TEMP_FILE_NAME_2ND = "TEMP_2ND"; // File name appendix for stage 2.
     private final int NUMBER_OF_WORKERS = 4; // The number of worker threads to create.
     private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
@@ -733,6 +733,17 @@ public class HmpController {
         }
     }
 
+    /**
+     * Creates a pool of workers and distributes the work evenly to calculate the results.
+     * 
+     * Steps: Create a task and add it to both pools and then start it immediately.
+     *        Split work evenly by giving tasks start and end lines
+     * <p>
+     * Results are written to a .csv text file at the set file location. The result files are meant to be merged sequentially
+     * after all threads have completed.
+     * 
+     * @param workers   The number of workers for this task. Simply the number of threads to create.
+     */
     private void convertHmpToCsvLargeThreaded(int workers) {
         if (workers > 0) {
             resultsPool = new HmpToCsvTaskLarge[workers];
@@ -743,10 +754,6 @@ public class HmpController {
                     outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
-                    (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers), // startColumn
-                    ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers), // endColumn
-                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS, // totalColumns
-                    totalInputLines - NUMBER_OF_HEADER_LINES, // totalLines
                     majorAllelesValues, // majorAlleles
                     i // the portion of the total data it will work on.
                 );

@@ -82,6 +82,31 @@ public class FileController {
     }
 
     /**
+     * Use to determine if the file path is a directory or not.
+     * 
+     * @param fileName   The file path with file name and with an extension.
+     * @return  Whether the file is a directory or not.
+     * 
+     * Note: There is no guarantee that the file path will still exist after this method returns.
+     */
+    public static boolean isADirectory(String fileName) {
+        if (fileName == null || fileName.isEmpty() || fileName.isBlank()) {
+            System.out.println("Error: The provided file path was empty.");
+            return false;
+        }
+        try {
+            File output = new File(fileName);
+            return output.isDirectory();
+        } catch (NullPointerException e) {
+            System.out.println("Error: The provided file path name could not be found or it was empty.");
+            return false;
+        } catch (SecurityException e) {
+            System.out.println("Unable to check the file. The security manager is denying access to the file.");
+            return false;
+        }
+    }
+
+    /**
      * Counts and returns the total number of lines in the provided text file.
      * @param fileName  The path containing the file name with an extension.
      * @return  An integer representing the total number of lines in the text file.

@@ -12,9 +12,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.snptools.converter.fileutilities.DiskFullException;
-import com.snptools.converter.fileutilities.FileController;
-
 /**
  * The HmpToCsvTaskLarge class is used to calculate and write the results of the hmp to 
  * csv conversion to the provided output file path when the input source is considered a
@@ -34,17 +31,12 @@ public class HmpToCsvTaskLarge implements Runnable {
 
     private final long startLine;
     private final long endLine;
-    private final long totalLines;
-
-    private final long startColumn;
-    private final long endColumn;
-    private final long totalColumns;
 
     private final int portion; // The portion of the total data that this worker is working on.
 
     private final String[] majorAllelesValues; // A reference to the calculated major alleles.
 
-    volatile private int numberOfFilesInSeries = 0;
+    volatile private int numberOfFilesInSeries = 0; // Value to be retrieved for merging after this task completes.
 
 
     /**
@@ -57,22 +49,14 @@ public class HmpToCsvTaskLarge implements Runnable {
      * @param outputFilename    The  The output file path and file name with an extension for processing.
      * @param startLine   The start line for this worker to start at.
      * @param endLine The end line for this worker to finish at.
-     * @param startColumn The column for this worker to finish at.
-     * @param endColumn The column for this worker to finish at.
-     * @param totalColumns  The number of columns this worker should process.
-     * @param totalLines    The total number of lines to process.
      * @param majorAllelesValues    A reference to the previously calculated major allleles.
      * @param portion    The worker number assigned to this chunk of the output.
      */
-    public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int startColumn, int endColumn, int totalColumns, int totalLines, String[] majorAllelesValues, int portion) {
+    public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, String[] majorAllelesValues, int portion) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
-        this.startColumn = (long) startColumn;
-        this.endColumn = (long) endColumn;
         this.startLine = (long) startLine;
         this.endLine = (long) endLine;
-        this.totalColumns = (long) totalColumns;
-        this.totalLines = (long) totalLines;
         this.majorAllelesValues = majorAllelesValues;
         this.portion = portion;
     }
@@ -82,7 +66,7 @@ public class HmpToCsvTaskLarge implements Runnable {
             BufferedReader reader = new BufferedReader(new FileReader(inputFilename));
         ) {
             long X = startLine;
-            long Y = endLine;
+            final long Y = endLine;
             int chunkSize = 512; // Tuning parameter: 1500+ with 4 workers and 8gb will likely throw OOM, ~250 was slower that 500.
 
             // Create temp folder - assume we will need folders:
@@ -151,7 +135,8 @@ public class HmpToCsvTaskLarge implements Runnable {
 
                 ++numberOfFilesInSeries;
 
-                X += (chunkSize - offsetCorrectionFactor);
+                //X += (chunkSize - offsetCorrectionFactor);
+                X += chunkSize;
             }
         } catch (FileNotFoundException e) {
             System.out.println("There was an error finding a file in a HmpToCsvTaskLarge worker.");
