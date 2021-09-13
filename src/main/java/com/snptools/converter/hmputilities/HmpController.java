@@ -119,21 +119,6 @@ public class HmpController {
                 System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
             }
         }
-        // Misaligned output: don't use
-        /* else { // Else, the file is "small", use the default method:
-            convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
-            try {
-                mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-                cleanUpAll(); // Attempt to delete temporary files and folders.
-            } catch (DiskFullException e) {
-                System.out.println("Error: The disk appears to be full. However, partial results are available.");
-                System.out.println("Use with caution.");
-                System.out.println("Partial results available at:");
-                for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
-                    System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
-                }
-            }
-        }*/
     }
 
     public void startHmpToVcf() {
@@ -147,17 +132,6 @@ public class HmpController {
             return;
         }
 
-        // Collect the input file line headers:
-        initLineHeaders();
-        collectLineHeaders();
-
-        collectSampleIds();
-        // Simple integrity check: Check if ids were collected, otherwise return
-        if (sampleIds == null || (sampleIds.length != (totalInputColumns - NUMBER_OF_HEADER_COLUMNS))) {
-            System.out.println("\nSample ids could not be detected. Please make sure the hmp file is well formed and that the number of records matches the number of ids.\n");
-            return;
-        }
-
         hmpPloidiness = determinePloidiness();
         // Simple integrity check:
         if (hmpPloidiness <= 0) {
@@ -165,15 +139,8 @@ public class HmpController {
             return;
         }
 
-        collectStrandDirections();
-        //printStrandDirections();
-        // Simple integrity check: Check if strands were collected, otherwise return
-        if (strandDirections == null || (strandDirections.length != (totalInputLines - NUMBER_OF_HEADER_LINES))) {
-            System.out.println("\nStrand directions could not be collected. Please make sure the hmp file is well formed.\n");
-            return;
-        }
-
         normalizeInputThreaded(NUMBER_OF_WORKERS);
+
         String intermediateFile = outputFileName + TEMP_FILE_NAME;
         try {
             mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
@@ -191,14 +158,17 @@ public class HmpController {
         calculateMajors();
         //printIntermediateData();
 
-        // Collect all of the alleles into a single ds in order to construct a proper line header as well as to
-        // provide translation of bases->integers for the hmp->vcf conversion process.
-        collectAllAlleles();
-        //printAllAllelesValues();
 
-        createOutputLineHeaders();
-        //printOutputLineHeaders();
+        // Create headers, exit if unable to do so.
+        if (!makeVcfHeaders()) {
+            System.out.println("Failed to collect data.");
+            return;
+        }
 
+        convertHmpToVcf();
+    }
+
+    private void convertHmpToVcf() {
         convertHmpToVcfThreaded(NUMBER_OF_WORKERS); // Write output.
         try {
             mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
@@ -208,6 +178,46 @@ public class HmpController {
             System.out.println("\nWarning: Partial results are available but may not be valid.\n");
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Organizing method that creates the output vcf headers.
+     * @return  True if the headers were created, false is there are
+     *          any errors.
+     */
+    private boolean makeVcfHeaders() {
+        // Collect the input file line headers:
+        initLineHeaders();
+        collectLineHeaders();
+
+        collectSampleIds();
+        // Simple integrity check: Check if ids were collected, otherwise return
+        if (sampleIds == null || (sampleIds.length != (totalInputColumns - NUMBER_OF_HEADER_COLUMNS))) {
+            System.out.println("\nSample ids could not be detected. Please make sure the hmp file is well formed and that the number of records matches the number of ids.\n");
+            return false;
+        }
+
+        collectStrandDirections();
+        //printStrandDirections();
+        // Simple integrity check: Check if strands were collected, otherwise return
+        if (strandDirections == null || (strandDirections.length != (totalInputLines - NUMBER_OF_HEADER_LINES))) {
+            System.out.println("\nStrand directions could not be collected. Please make sure the HMP file is well formed.\n");
+            return false;
+        }
+
+        // Collect all of the alleles into a single ds in order to construct a proper line header as well as to
+        // provide translation of bases->integers for the hmp->vcf conversion process.
+        collectAllAlleles();
+        //printAllAllelesValues();
+
+        createOutputLineHeaders();
+        //printOutputLineHeaders();
+        if (allAllelesValues == null || outputLineHeaders == null || (outputLineHeaders.length != (totalInputLines - NUMBER_OF_HEADER_LINES))) {
+            System.out.println("\nVCF output headers could not be created. Please make sure the HMP file is well formed.\n");
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -983,6 +993,24 @@ public class HmpController {
         for (int i = 0; i < outputLineHeaders.length; ++i) { //outputLineHeaders.length
             System.out.println("[" + i + "]: [" + outputLineHeaders[i] + "]");
         }
+    }
+
+    /**
+     * Returns the input file path with an extension.
+     *
+     * @return  The input file name and path with an extension.
+     */
+    public String getInputFilePath() {
+        return hmpFileName;
+    }
+
+    /**
+     * Returns the output file path with an extension.
+     *
+     * @return  The output file name and path with an extension.
+     */
+    public String getOutputFilePath() {
+        return outputFileName;
     }
 
 }

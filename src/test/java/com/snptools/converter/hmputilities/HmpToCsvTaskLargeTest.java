@@ -1,5 +1,6 @@
 package com.snptools.converter.hmputilities;
 
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -22,7 +23,7 @@ public class HmpToCsvTaskLargeTest {
 
     final String TEST_INPUT_HMP = "./src/test/resources/testFullNormal.hmp";
     final String TEST_OUTPUT_HMP = "./src/test/resources/testHmp.csv";
-    final String TEST_OUTPUT_HMP_LARGE = "./src/test/resources/LARGEtestHmp.csv";
+    final String TEST_OUTPUT_HMP_LARGE = "./src/test/resources/LARGEtestHmp.csv"; // Does not exist - placeholder value.
 
     final int START_LINE_HMP = 0;
     final int END_LINE_HMP = 5;
@@ -55,7 +56,12 @@ public class HmpToCsvTaskLargeTest {
     void testRun() {
         final int portion = 1;
         HmpToCsvTaskLarge hmpToCsvTaskLarge = new HmpToCsvTaskLarge(TEST_INPUT_HMP, TEST_OUTPUT_HMP_LARGE, START_LINE_HMP, END_LINE_HMP, majorAlleles, portion);
-        hmpToCsvTaskLarge.run();
+        try {
+            hmpToCsvTaskLarge.run();
+        } catch (Exception e) {
+            fail("There was a problem during testing in HmpToCsvTaskLargeTest.testRun().");
+            //e.printStackTrace();
+        }
     }
 
     /**
