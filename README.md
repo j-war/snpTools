@@ -44,11 +44,11 @@ All scripts should be run from the root directory: `snpTools/`.
 
 Only run `build.sh` script once. If you need to run it again, delete the contents of `snpTools/build/` first.
 
-You can call the run script multiple times but beware that the program <b>WILL</b> overwrite and/or delete files in `snpTools/OutputFolder/` without warning.
-
 Make sure there is an empty `snpTools/build/` folder created before using the `build.sh` script.
 
-File names as input arguments should be relative and have file extensions and should be in the `snpTools/InputFolder/`. You should also create a folder named `snpTools/OutputFolder/` beside it before running.
+You can call the run script multiple times but beware that the program <b>WILL</b> overwrite and/or delete files in `snpTools/OutputFolder/` without warning.
+
+File names as input arguments should be relative and have file extensions and should point to a file in the `snpTools/InputFolder/` or `snpTools/OutputFolder`. You should also create a folder named `snpTools/OutputFolder/` beside it before running.
 
 
 ## Compiling with Maven:
