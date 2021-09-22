@@ -51,7 +51,7 @@ public class HmpSumTask implements Runnable {
      * Initializes and fills the totals datastructure with default data for further transformation.
      */
     private void initTotals() {
-        // Populate the totals of arrays to store counts of ACTGN??
+        // Populate the totals of arrays to store counts of ACTGN/X.
         synchronized (totals) {
             for (int i = 0; i < endLine - startLine; ++i) {
                 totals.add(i, new int[NUMBER_OF_BASES]);
@@ -114,16 +114,12 @@ public class HmpSumTask implements Runnable {
         }
         Scanner lineScanner = new Scanner(line);
         lineScanner.useDelimiter(",");
-        // System.out.println("lineNumber:[" + lineNumber + "] Line: [" + line + "]");
         // 5.
         for (int j = 0; j < totalColumns; ++j) {
-            //System.out.println("Line: " + line);
             synchronized (totals) {
-                //for (int k = 0; k < columns; ++k) {
                 if (lineScanner.hasNext()) {
                     // 6.
                     String value = lineScanner.next();
-                    //System.out.println("Value: [" + value + "] ");
                     // Switch on the value to count frequency:
                     // 7.
                     if (value.length() >= 1) {
@@ -141,7 +137,7 @@ public class HmpSumTask implements Runnable {
                                 case "T", "t":
                                     ++(totals.get(lineNumber)[3]);
                                     break;
-    
+
                                 case "R", "r": // A or G
                                     ++(totals.get(lineNumber)[4]);
                                     break;
@@ -160,7 +156,7 @@ public class HmpSumTask implements Runnable {
                                 case "M", "m": // A or C
                                     ++(totals.get(lineNumber)[9]);
                                     break;
-    
+
                                 case "B", "b": // C or G or T
                                     ++(totals.get(lineNumber)[10]);
                                     break;
@@ -173,15 +169,15 @@ public class HmpSumTask implements Runnable {
                                 case "V", "v": // A or C or G
                                     ++(totals.get(lineNumber)[13]);
                                     break;
-    
+
                                 case "N", "n": // Any base
                                     ++(totals.get(lineNumber)[14]);
                                     break;
-    
+
                                 case ".", "-": // Gap
                                     ++(totals.get(lineNumber)[15]);
                                     break;
-    
+
                                 default: // Unknowns
                                     ++(totals.get(lineNumber)[16]);
                                     //System.out.println("00, or unknown." + columnNumber + ". " + value);

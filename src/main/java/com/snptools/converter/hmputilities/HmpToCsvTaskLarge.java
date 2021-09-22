@@ -81,8 +81,6 @@ public class HmpToCsvTaskLarge implements Runnable {
                 List<List<Integer>> inputChunk = new ArrayList<List<Integer>>(); // Inner List holds lines/rows.
                 List<List<Integer>> outputChunk = new ArrayList<List<Integer>>(); // Inner List holds columns.
 
-                int offsetCorrectionFactor = 0; // Used in the tail portion to correct for chunks not divisible by chunkSize.
-
                 for (int j = 0; j < chunkSize; ++j) {
                     inputChunk.add(j, new ArrayList<Integer>());
                     String line = reader.readLine();
@@ -94,10 +92,10 @@ public class HmpToCsvTaskLarge implements Runnable {
                                 (inputChunk.get(j)).add(accumulateResults(X + j, entry));
                             }
                         } else { // Line is blank/newline, ignore it by incrementing offset:
-                            ++offsetCorrectionFactor;
+                            // Skip.
                         }
                     } else { // total lines not divisible by chunksize - we read a null, increment offset and continue.
-                        ++offsetCorrectionFactor;
+                        // Skip.
                     }
                 } // Done reading in a chunk of input.
 
@@ -120,8 +118,14 @@ public class HmpToCsvTaskLarge implements Runnable {
                 // Write outputChunk:
                 FileOutputStream outputChunkStream = new FileOutputStream("./" + tempDir + "/" + outputFile + numberOfFilesInSeries);
                 OutputStreamWriter outputChunkWriter = new OutputStreamWriter(outputChunkStream);
+
+                String result = "";
                 for (int j = 0; j < outputChunk.size(); ++j) {
-                    String result = "";
+                    if (X == 0 && portion == 0) { // Only the first file in the series should get a phenotype.
+                        result = "-9,"; // Phenotype placeholder.
+                    } else {
+                        result = "";
+                    }
                     for (int k = 0; k < outputChunk.get(j).size(); ++k) {
                         if (k < outputChunk.get(j).size() - 1) {
                             result += ((outputChunk.get(j)).get(k) + ",");
@@ -135,7 +139,6 @@ public class HmpToCsvTaskLarge implements Runnable {
 
                 ++numberOfFilesInSeries;
 
-                //X += (chunkSize - offsetCorrectionFactor);
                 X += chunkSize;
             }
         } catch (FileNotFoundException e) {
@@ -160,9 +163,9 @@ public class HmpToCsvTaskLarge implements Runnable {
     private int accumulateResults(long lineNumber, String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {
             System.out.println("The provided entry contained no data.");
-            //partialResults[lineNumber] = MISSING_DATA + 1;
             return (MISSING_DATA + 1);
         }
+
         int result = 0;
         // Compare allele to majorAllelesValues array to determine output:
         for (int k = 0; k < entry.length(); ++k) {
@@ -188,8 +191,6 @@ public class HmpToCsvTaskLarge implements Runnable {
                     break;
             }
         }
-        // Save result to linebuffer:
-        //partialResults[lineNumber] = result;
         return result;
     }
 

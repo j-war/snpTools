@@ -19,7 +19,7 @@ import java.util.Scanner;
  * The frequencies of bases are first totaled and then the major allele is determined from the data set
  * provided. The ped file is compared against the calculated major to determine the csv output.
  * @author  Jeff Warner
- * @version 1.1, July 2021
+ * @version 1.2, September 2021
  */
 public class PedController {
 
@@ -28,8 +28,8 @@ public class PedController {
     private volatile String pedFileName = "./input.ped"; // The input file name with path and extension.
     private volatile String outputFileName = "./output.csv"; // The output file name with path and extension.
     private final String TEMP_FILE_NAME = "TEMP"; // Appendix for intermediate files.
-    private volatile int totalInputLines = 0; // 281.
-    private volatile int inputColumnCount = 0; // 3093 = totals.size().
+    private volatile int totalInputLines = 0;
+    private volatile int inputColumnCount = 0; // = totals.size().
     private final int NUMBER_OF_WORKERS = 4; // The number of threads to create.
 
     //  ALL access, including reading through .get(), must be in a synchronized block or through the synchronized method.
@@ -50,11 +50,9 @@ public class PedController {
         this.outputFileName = outputName;
     }
 
-    //mvn package && java -cp target/converter-1.0.jar com.snptools.converter.DataInput 0 ./InputFolder/mdp_genotype.plk ./OutputFolder/OutputPedToCsv
     public void startPedToCsv() {
-        // Time estimates: 3.5mb = 1 second, 1.3gb = 3 mins, 32gb = 1.5 hours (For the 32gb test the output was not concatenated.)
-        totalInputLines = FileController.countTotalLines(pedFileName); // 125ms. 800ms on 300mb, [1.3gb: 3900-5500ms on 150 lines, 8.5million character line, 4.27m columns].
-        inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
+        totalInputLines = FileController.countTotalLines(pedFileName);
+        inputColumnCount = countLineLength();
 
         printDebugLineInfo();
         // Simple integrity check:
@@ -66,8 +64,7 @@ public class PedController {
 
         initTotals();
         mergeThreadTotals(); // Grabs the data from the individual task workers and combines them.
-        calculateMajors(); // 2.7ms - Calculate the major alleles from the totals DS.
-        // 800ms total.
+        calculateMajors();
 
         calculateResultsThreaded(NUMBER_OF_WORKERS); // 440ms - Scan the file comparing the file entry to the entry in majorAlleles.
         try {
@@ -125,7 +122,6 @@ public class PedController {
             // Create task and add it to both pools and then start it immediately.
             // Split work evenly, give threads start and end lines
             for (int i = 0; i < workers; ++i) {
-                // (i * lines / arg), (((1 + i) * lines) / arg)
                 sumPool[i] = new PedSumTask(
                     pedFileName,
                     (i * totalInputLines / workers),
@@ -287,87 +283,6 @@ public class PedController {
         System.out.println("Lines: " + totalInputLines);
         System.out.println("Header line length: " + NUMBER_OF_HEADER_COLUMNS);
         System.out.println("Line length: " + inputColumnCount);
-    }
-
-    // Debug helper:
-    private void printDebugInformation() {
-        // Output results:
-        int isZero = 0;
-        for (int i = 0; i < getTotals().size(); ++i) {
-            //System.out.print("Pair[" + i + "]: ");
-            //for (int j = 0; j < 5; ++j) {
-                //System.out.print(pedController.totals.get(i)[j] + " ");
-            //}
-            int sum = getTotals().get(i)[0]
-                        + getTotals().get(i)[1] + getTotals().get(i)[2]
-                        + getTotals().get(i)[3]+ getTotals().get(i)[4];
-
-            if (sum != 2 * totalInputLines) {
-                ++isZero;
-                System.out.println("Error in sum: " + sum);
-                System.out.println("Line: " + i);
-                break;
-            }
-            //System.out.println(sum);
-        }
-        System.out.println("Zero if correct: " + isZero);
-        System.out.println("pedController.totals.size()=" + getTotals().size());
-        System.out.println("pedController.totals.get(0).length=" + getTotals().get(0).length);
-        System.out.println("2 * pedController.inputLineCount=" + (2 * totalInputLines));
-
-        //
-        // Debug checks:
-        //
-
-        /* // Phenotype check:
-        for (int i = 0; i < pedController.sumPool.length; ++i) {
-            for (int j = 0; j < pedController.sumPool[i].getPhenotypes().length; ++j) {
-                System.out.print(pedController.sumPool[i].getPhenotypes()[j]);
-            }
-            System.out.println("");
-            //System.out.print(pedController.phenotypes[i]);
-            //System.out.print(pedController.sumPool[3].getPhenotypes()[i]);
-        }
-        System.out.println("");
-        */
-
-        System.out.print("Majors:");
-        for (int j = 0; j < 70; ++j) {
-            System.out.print(majorAllelesValues[j]);
-        }
-        System.out.println("");
-        System.out.print("Majors:");
-        for (int j = 70; j < 140; ++j) {
-            System.out.print(majorAllelesValues[j]);
-        }
-        System.out.println("");
-
-        System.out.println("Majors.length:" + majorAllelesValues.length);
-//        System.out.println("results.size:" + pedController.results.get(0).length);
-
-        /*
-        for (int i = 0; i < 3093; ++i) {
-            System.out.print(i + ":");
-            for (int j = 0; j < 5; ++j) {
-                System.out.print(" " + pedController.getTotals().get(i)[j]);
-            }
-            System.out.println("");
-        }
-        */
-    }
-
-    // Debug helper:
-    private void printTotals() {
-        synchronized (totals) {
-            for (int i = 0; i < totals.size(); ++i) {
-                System.out.print("(" + i + ") ");
-                for (int j = 0; j < 5; ++j) {
-                    System.out.print(" " + totals.get(i)[j]);
-                }
-                System.out.println("");
-            }
-            //System.out.println("423: " + totals.get(423)[0] + " " + totals.get(423)[1] + " " + totals.get(423)[1] + " " + totals.get(423)[3] + " " + totals.get(423)[4]);
-        }
     }
 
     /**

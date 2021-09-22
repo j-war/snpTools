@@ -55,9 +55,9 @@ public class VcfController {
     }
 
     public void startVcfToCsv() {
-        totalInputLines = FileController.countTotalLines(vcfFileName); // 125ms. 800ms on 300mb, [1.3gb: 3900-5500ms on 150 lines, 8.5million character line, 4.27m columns].
+        totalInputLines = FileController.countTotalLines(vcfFileName);
         numberOfHeaderLines = countHeaderLines();
-        inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
+        inputColumnCount = countLineLength();
 
         // Simple integrity check:
         if (totalInputLines <= 0 || numberOfHeaderLines <= 0 || inputColumnCount <= 0) {
@@ -88,7 +88,6 @@ public class VcfController {
     }
 
     private void convertVcfToCsv() {
-        //processInputThreaded(NUMBER_OF_WORKERS);
         convertVcfToCsvThreaded(NUMBER_OF_WORKERS);
         try {
             //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
@@ -107,10 +106,9 @@ public class VcfController {
     }
 
     public void startVcfToHmp() {
-        totalInputLines = FileController.countTotalLines(vcfFileName); // 125ms. 800ms on 300mb, [1.3gb: 3900-5500ms on 150 lines, 8.5million character line, 4.27m columns].
+        totalInputLines = FileController.countTotalLines(vcfFileName);
         numberOfHeaderLines = countHeaderLines();
-        inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
-
+        inputColumnCount = countLineLength();
         // determinePloidiness() // NYI.
 
         printDebugLineInfo();
@@ -197,7 +195,7 @@ public class VcfController {
             return 0;
         }
     }
-    
+
     /**
      * Counts the number of columns present in the vcf file. The number of data
      * input columns is returned while the number of header columns is set manually.
@@ -376,18 +374,6 @@ public class VcfController {
      *       and predictable output.
      */
     private void createOutputLineHeaders() {
-/* Example: file header + newline + first data entries line header
-
-outputLineHeaders[0] =
-        (column headers) + (sample ids) + (\n) = 
-        "rs#	alleles	chrom	pos	strand	assembly#	center	protLSID	assayLSID	panel	QCcode" + "ids" + "\n"
-
-outputLineHeaders[1] onwards = 
-        vcf[2] + (vcf[3] + "/" + vcf[4]) + vcf[0] + vcf[1] + "." + "." + "NA" + "NA" + "NA" + NA" + "NA" + (data here)
-
-        where (data here) is filled in in the conversion task worker.
-*/
-
         outputLineHeaders = new String[totalInputLines - numberOfHeaderLines];
         for (int i = 0; i < outputLineHeaders.length; ++i) {
             outputLineHeaders[i] = "";
@@ -515,32 +501,6 @@ outputLineHeaders[1] onwards =
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-/* Example:
-    i = 0
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 0 + numberOfHeaderLines = 11
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = (totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = (3104-11)/4 + 11 = 784.25
-
-    i = 1
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 1*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 1*(3104-11)/4 + 11 = 784.25
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 2*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 2*(3104-11)/4 + 11 = 1557.5
-
-    i = 2
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 2*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 2*(3104-11)/4 + 11 = 1557.5
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 3*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 3*(3104-11)/4 + 11 = 2330.75
-
-    i = 3
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 3*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 3*(3104-11)/4 + 11 = 2330.75
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 4*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 4*(3104-11)/4 + 11 = 3104
-
-*/
                 normalizePool[i] = new NormalizeInputTask(
                     vcfFileName,
                     outputFileName + TEMP_FILE_NAME + i,
@@ -576,6 +536,7 @@ outputLineHeaders[1] onwards =
      *
      * Note: Only diploid cells are currently supported.
      */
+    @Deprecated
     private void processInputThreaded(int workers) {
         if (workers > 0) {
             resultsPool = new VcfToCsvTask[workers];
@@ -678,13 +639,6 @@ outputLineHeaders[1] onwards =
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-                // Input file
-                // Output file
-                // Line to start
-                // End line
-                // How many columns
-                // Alleles[]
-
                 resultsPool[i] = new VcfToHmpTask(
                     outputFileName + TEMP_FILE_NAME,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
@@ -733,7 +687,9 @@ outputLineHeaders[1] onwards =
      */
     private void cleanUpAll() {
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME); // Delete stage 1 files.
-        //FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        if (FileController.canReadFile(outputFileName + TEMP_FILE_NAME)) {
+            FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        }
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME_2ND); // Delete stage 2 files.
         FileController.deleteTempFolders(NUMBER_OF_WORKERS, outputFileName);
     }

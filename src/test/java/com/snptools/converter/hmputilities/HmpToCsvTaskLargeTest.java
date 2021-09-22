@@ -88,25 +88,26 @@ public class HmpToCsvTaskLargeTest {
 
         final String TEST_HMP_TRANSPOSE_IN = "./src/test/resources/testHmpToCsvTranspose.hmp";
         final String TEST_HMP_TRANSPOSE_OUT = "./src/test/resources/testHmpToCsvTranspose.csv";
-        final String TEST_HMP_TRANSPOSE_OUT_FINAL = "./src/test/resources/temp1/testHmpToCsvTranspose.csv0";
+        final String TEST_HMP_TRANSPOSE_OUT_FINAL = "./src/test/resources/temp0/testHmpToCsvTranspose.csv0";
 
         final String[] alleles = new String[]{"A", "C", "T", "G", "N"};
 
-        final int portion = 1;
+        final int portion = 0;
         HmpToCsvTaskLarge hmpToCsvTaskLarge = new HmpToCsvTaskLarge(TEST_HMP_TRANSPOSE_IN, TEST_HMP_TRANSPOSE_OUT, START_LINE_HMP, END_LINE_HMP, alleles, portion);
         hmpToCsvTaskLarge.run();
 
+        // Prepend the phenotype placeholder
         String[] expectedResults = new String[] {
-            "0,0,0,0,0",
-            "2,2,2,2,2",
-            "2,0,2,2,2",
-            "2,2,2,2,2",
-            "0,0,2,2,2",
-            "2,0,0,2,2",
-            "1,1,0,2,5",
-            "0,0,0,2,2",
-            "2,0,2,2,2",
-            "2,2,0,2,2"
+            "-9,0,0,0,0,0",
+            "-9,2,2,2,2,2",
+            "-9,2,0,2,2,2",
+            "-9,2,2,2,2,2",
+            "-9,0,0,2,2,2",
+            "-9,2,0,0,2,2",
+            "-9,1,1,0,2,5",
+            "-9,0,0,0,2,2",
+            "-9,2,0,2,2,2",
+            "-9,2,2,0,2,2"
         };
 
         // Read in output file compare it to expected results:

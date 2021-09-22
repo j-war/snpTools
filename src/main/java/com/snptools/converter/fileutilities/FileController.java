@@ -475,25 +475,5 @@ public class FileController {
 
         return entry;
     }
-    // Writes the results and phenotype datastructures to the previously
-    // named output file. May throw FileNotFoundException if the file
-    // cannot be created for some reason.
-    /*
-    void writeOutput() throws FileNotFoundException {
-        FileOutputStream outputStream = new FileOutputStream(csvFileName);
-        try (OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)) {
-            for (int i = 0; i < inputLineCount; ++i) { // Lines.
-                outputStreamWriter.write(phenotypes[i]);
-                for (int j = 0; j < inputColumnCount; ++j) { // Columns.
-                    outputStreamWriter.write("," + results.get(i)[j]);
-                }
-                outputStreamWriter.write("\n");
-            }
-            System.out.println("Successfully wrote file.");
-        } catch (Exception e) {
-            System.out.println("An error occurred writing the file.");
-            e.printStackTrace();
-        }
-    }*/
 
 }

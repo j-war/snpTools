@@ -35,7 +35,7 @@ class DataInput {
         }
 
         // END:
-        endTime = System.nanoTime(); // 1.1 sec for 3.5mb, 2min 40 sec for 1.3gb, 1.5hrs for 31.5gb
+        endTime = System.nanoTime();
 
         // RESULT:
         long timeElapsed = endTime - startTime;
@@ -95,7 +95,7 @@ class DataInput {
             }
                 break;
             default: { // Unknown mode.
-                System.out.println("Unknown mode.\nPlease provide the mode of operation (0: ped->csv, 1: vcf->csv, 2: hmp->csv, etc.), the name of the input file, and the name of the output file.");
+                System.out.println("Unknown mode.\nPlease provide the mode of operation (0: ped->csv, 1: vcf->csv, 2: hmp->csv, 3: vcf->hmp, 4: hmp->vcf), the name of the input file, and the name of the output file.");
                 break;
             }
         }
@@ -135,8 +135,10 @@ class DataInput {
 
 
 /*
+
 jar tf target/converter-1.0.jar
 java -cp target/converter-1.0.jar com.snptools.converter.DataInput 0 ./InputFolder/mdp_genotype.plk ./OutputFolder/OutputPedToCsv
+
 
 mvn package && java -cp target/converter-1.0.jar com.snptools.converter.DataInput 0 ./InputFolder/mdp_genotype.plk.ped ./OutputFolder/OutputPedToCsv.csv
 

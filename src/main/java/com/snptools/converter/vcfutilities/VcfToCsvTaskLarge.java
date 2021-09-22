@@ -115,8 +115,13 @@ public class VcfToCsvTaskLarge implements Runnable {
                 // Write outputChunk:
                 FileOutputStream outputChunkStream = new FileOutputStream("./" + tempDir + "/" + outputFile + numberOfFilesInSeries);
                 OutputStreamWriter outputChunkWriter = new OutputStreamWriter(outputChunkStream);
+                String result = "";
                 for (int j = 0; j < outputChunk.size(); ++j) {
-                    String result = "";
+                    if (X == 0 && portion == 0) { // Only the first file in the series should get a phenotype.
+                        result = "-9,"; // Phenotype placeholder.
+                    } else {
+                        result = "";
+                    }
                     for (int k = 0; k < outputChunk.get(j).size(); ++k) {
                         if (k < outputChunk.get(j).size() - 1) {
                             result += ((outputChunk.get(j)).get(k) + ",");

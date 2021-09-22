@@ -161,10 +161,6 @@ public class VcfToHmpTask implements Runnable {
                     result = "" + entryOne + entryTwo;
                 }
                 partialResults[columnNumber] = result;
-        /* if alphabetical/strand correction is not desired, use this:
-        //result = "" + options.substring(positionOne, positionOne + 1) + options.substring(positionTwo, positionTwo + 1);
-        //result = "" + alleles[i][positionOne] + alleles[i][positionTwo]
-        */
             }
         } catch (NumberFormatException e) {
             // Thrown when the "no data" entry is encountered: "./."

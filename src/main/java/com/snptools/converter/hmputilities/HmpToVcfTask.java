@@ -27,7 +27,7 @@ public class HmpToVcfTask implements Runnable {
     //private static final int HAPLOID_WIDTH = 1;
     private final int ploidWidth;
     //private static final int TRIPLOID_WIDTH = 3;
-    private final int SIZE_OF_HMP_COLUMN = 3;
+    //private final int SIZE_OF_HMP_COLUMN = 3;
     private final String[] alleles; // A reference to the collected alleles array.
     private final String[] strandDirections; // A reference to the collected strands directions array.
     private final String[] lineHeaders; // A reference to the line headers array.
@@ -188,76 +188,6 @@ public class HmpToVcfTask implements Runnable {
             }
             partialResults[columnNumber] = errorResult;
         }
-
-
-
-/*
-        if (ploidWidth == 10) {
-            //System.out.println("entry: [" + entry + "]");
-            try {
-                String result = ".";
-
-                String[] values = alleles[lineNumber].split(",");
-
-                for (int k = 0; k < values.length; ++k) { // Convert entry to index into the collected values:
-                    if (entry.compareToIgnoreCase(values[k]) == 0) {
-                        result = "" + k;
-                    }
-                }
-                // If the entry was not found in the previously collected alleles array, assign a blank value:
-                if (entry.compareToIgnoreCase(".") == 0) {
-                    result = ".";
-                }
-                partialResults[columnNumber] = result;
-            } catch (IndexOutOfBoundsException e) {
-                System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
-                // Likely a malformed file or programming logical error:
-                partialResults[columnNumber] = ".";
-            }
-
-        } else if (ploidWidth == 20) {
-            try {
-                String entryOne = "";
-                String entryTwo = "";
-                // Check the strand direction:
-                if (strandDirections[lineNumber].equalsIgnoreCase("+")) { // if strand == +
-                    entryOne = "" + entry.substring(1, 2);
-                    entryTwo = "" + entry.substring(0, 1);
-                } else { // else strand == -
-                    entryOne = "" + entry.substring(0, 1);
-                    entryTwo = "" + entry.substring(1, 2);
-                }
-                String entryOneResult = ".";
-                String entryTwoResult = ".";
-                String result = "";
-
-                String[] values = alleles[lineNumber].split(",");
-
-                // Compare entryOne and entryTwo to values[] to determine index, append index to result.
-                // Append result to the lineBuffer.
-
-                for (int k = 0; k < values.length; ++k) {
-                    //System.out.println("entry: [" + entry + "]");
-                    if (entryOne.compareToIgnoreCase(values[k]) == 0) {
-                        entryOneResult = "" + k;
-                    }
-                    if (entryTwo.compareToIgnoreCase(values[k]) == 0) {
-                        entryTwoResult = "" + k;
-                    }
-                }
-                if (entryOne.compareToIgnoreCase(".") == 0 || entryTwo.compareToIgnoreCase(".") == 0) {
-                    result = "./.";
-                } else {
-                    result = entryOneResult + "/" + entryTwoResult;
-                }
-                partialResults[columnNumber] = result;
-            } catch (IndexOutOfBoundsException e) {
-                System.out.println("Skipping input. Possible malformed HMP file - index is out of range of collected data.");
-                // Likely a malformed file or programming logical error:
-                partialResults[columnNumber] = "./."; // Two '.' characters for diploids, three for triploid, etc.
-            }
-        }*/
-
 
     }
 

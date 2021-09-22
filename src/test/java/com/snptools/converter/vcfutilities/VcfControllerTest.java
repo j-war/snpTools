@@ -39,7 +39,6 @@ public class VcfControllerTest {
     final String[] alleles = new String[NUMBER_OF_COLUMNS];
     final String[] outputLineHeaders = new String[NUMBER_OF_COLUMNS];
 
-
     /**
      * Tests whether the controller is constructed with the correct 
      * input and output file properties set.
