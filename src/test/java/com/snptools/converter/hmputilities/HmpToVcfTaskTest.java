@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 public class HmpToVcfTaskTest {
 
     final String TEST_INPUT_HMP = "./src/test/resources/testHalfNormal.hmp";
-    final String TEST_OUTPUT_HMP = "./src/test/resources/testHmp.vcf";
+    final String TEST_OUTPUT_VCF = "./src/test/resources/testHmp.vcf";
 
     final int START_LINE_HMP = 1;
     final int END_LINE_HMP = 6;
@@ -57,7 +57,7 @@ public class HmpToVcfTaskTest {
         String[] outputLineHeaders
         */
         HmpToVcfTask hmpToVcfTask = new HmpToVcfTask(
-            TEST_INPUT_HMP, TEST_OUTPUT_HMP,
+            TEST_INPUT_HMP, TEST_OUTPUT_VCF,
             START_LINE_HMP, END_LINE_HMP, NUMBER_OF_COLUMNS,
             majorAlleles, strandDirections, outputLineHeaders, 1);
         assertNotNull(hmpToVcfTask);
@@ -108,7 +108,7 @@ public class HmpToVcfTaskTest {
         // 2.
         HmpToVcfTask hmpToVcfTask = new HmpToVcfTask(
             TEST_INPUT_HMP,
-            TEST_OUTPUT_HMP,
+            TEST_OUTPUT_VCF,
             START_LINE_HMP,
             END_LINE_HMP,
             NUMBER_OF_TEST_COLUMNS,
@@ -192,7 +192,7 @@ public class HmpToVcfTaskTest {
         // 2.
         HmpToVcfTask hmpToVcfTaskSingle = new HmpToVcfTask(
             TEST_INPUT_HMP,
-            TEST_OUTPUT_HMP,
+            TEST_OUTPUT_VCF,
             START_LINE_HMP,
             END_LINE_HMP,
             NUMBER_OF_TEST_COLUMNS,

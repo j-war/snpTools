@@ -9,6 +9,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.Test;
  * @author  Jeff Warner
  * @version 1.0, August 2021
  */
+@Disabled("Class is @Deprecated")
 public class VcfToCsvTaskTest {
 
     final String TEST_INPUT_VCF = "./src/test/resources/test.vcf";
@@ -40,6 +42,7 @@ public class VcfToCsvTaskTest {
      */
     @Test
     @DisplayName("shouldConstructVcfToCsvTask")
+    @Disabled("Class is @Deprecated")
     public void shouldConstructVcfToCsvTask() {
         VcfToCsvTask vcfToCsvTask = new VcfToCsvTask(TEST_INPUT_VCF, TEST_OUTPUT_VCF, START_COLUMN, END_COLUMN, NUMBER_OF_COLUMNS, TOTAL_LINES);
         assertNotNull(vcfToCsvTask);
@@ -53,6 +56,7 @@ public class VcfToCsvTaskTest {
      */
     @Test
     @DisplayName("shouldAccumulateResults")
+    @Disabled("Class is @Deprecated")
     public void shouldAccumulateResults() throws NoSuchFieldException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException { 
 
         // Construct string[] of entries

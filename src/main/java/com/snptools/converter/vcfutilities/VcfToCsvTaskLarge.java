@@ -1,4 +1,4 @@
-package com.snptools.converter.hmputilities;
+package com.snptools.converter.vcfutilities;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -13,19 +13,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The HmpToCsvTaskLarge class is used to calculate and write the results of the hmp to 
- * csv conversion to the provided output file path when the input source is considered a
- * large file (2+gb).
+ * The VcfToCsvTaskLarge class is used to transpose and translate vcf data to csv.
  * <p>
- * The resulting files are to be merged sequentially once the task has completed
+ * The resulting files are to be merged sequentially, by line, once the task has completed
  * and the threads were successfully joined.
  * 
  * @author  Jeff Warner
- * @version 1.4, September 2021
+ * @version 1.1, September 2021
  */
-public class HmpToCsvTaskLarge implements Runnable {
+public class VcfToCsvTaskLarge implements Runnable {
 
-    private final int MISSING_DATA = 4; // The SNP at this site is missing from the hmp file. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
+    private final int BAD_DATA = 9; // The SNP at this site is missing from the vcf file - there was no data for this site. Note: the output csv file may have a 4 or 5 for this site. 4 if both alleles were missing data, or 5 if only 1 allele was.
     private final String inputFilename; // The input file name with path and extension.
     private final String outputFilename; // The output file name with path and extension.
 
@@ -34,13 +32,17 @@ public class HmpToCsvTaskLarge implements Runnable {
 
     private final int portion; // The portion of the total data that this worker is working on.
 
-    private final String[] majorAllelesValues; // A reference to the calculated major alleles.
-
     volatile private int numberOfFilesInSeries = 0; // Value to be retrieved for merging after this task completes.
 
+    private static final int VCF_HAPLOID_WIDTH = 1;
+    private static final int VCF_DIPLOID_WIDTH = 3; // The number of characters wide including the inner separator.
+    private static final int VCF_TRIPLOID_WIDTH = 5;
+    private static final int MISSING_DATA = 5; // CSV format uses 5 for two missing data points in diploids.
+    //private static final long SIZE_OF_VCF_COLUMN = 4;
+
     /**
-     * Compares the input file to the calculated site's major and writes its output to the provided path.
-     * This conversion involves a transpose of HMP columns into CSV lines.
+     * Uses characteristics of the VCF input file to determine an output and writes it to the provided path.
+     * This conversion involves a transpose of VCF columns into CSV lines.
      * The startColumn and endColumn arguments are used for file pointer positioning while the
      * totalColumns and totalLines arguments are used for transposing and transforming the data.
      * 
@@ -48,15 +50,13 @@ public class HmpToCsvTaskLarge implements Runnable {
      * @param outputFilename    The  The output file path and file name with an extension for processing.
      * @param startLine   The start line for this worker to start at.
      * @param endLine The end line for this worker to finish at.
-     * @param majorAllelesValues    A reference to the previously calculated major allleles.
      * @param portion    The worker number assigned to this chunk of the output.
      */
-    public HmpToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, String[] majorAllelesValues, int portion) {
+    public VcfToCsvTaskLarge(String inputFilename, String outputFilename, int startLine, int endLine, int portion) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
         this.startLine = (long) startLine;
         this.endLine = (long) endLine;
-        this.majorAllelesValues = majorAllelesValues;
         this.portion = portion;
     }
 
@@ -89,14 +89,11 @@ public class HmpToCsvTaskLarge implements Runnable {
                             String[] arr = line.split(",");
 
                             for (String entry : arr) {
-                                (inputChunk.get(j)).add(accumulateResults(X + j, entry));
+                                //(inputChunk.get(j)).add(accumulateResults(X + j, entry)); // Deprecated.
+                                (inputChunk.get(j)).add(interpretEntry(entry));
                             }
-                        } else { // Line is blank/newline, ignore it by incrementing offset:
-                            // Skip.
-                        }
-                    } else { // total lines not divisible by chunksize - we read a null, increment offset and continue.
-                        // Skip.
-                    }
+                        } // else { // Line is blank/newline, ignore it by incrementing offset: }
+                    } // else { // total lines not divisible by chunksize - we read a null, increment offset and continue. }
                 } // Done reading in a chunk of input.
 
                 // Transpose the processed lines to output lists:
@@ -118,7 +115,6 @@ public class HmpToCsvTaskLarge implements Runnable {
                 // Write outputChunk:
                 FileOutputStream outputChunkStream = new FileOutputStream("./" + tempDir + "/" + outputFile + numberOfFilesInSeries);
                 OutputStreamWriter outputChunkWriter = new OutputStreamWriter(outputChunkStream);
-
                 String result = "";
                 for (int j = 0; j < outputChunk.size(); ++j) {
                     if (X == 0 && portion == 0) { // Only the first file in the series should get a phenotype.
@@ -142,56 +138,126 @@ public class HmpToCsvTaskLarge implements Runnable {
                 X += chunkSize;
             }
         } catch (FileNotFoundException e) {
-            System.out.println("There was an error finding a file in a HmpToCsvTaskLarge worker.");
+            System.out.println("There was an error finding a file in a VCFToCsvTaskLarge worker.");
             e.printStackTrace();
         } catch (IOException e) {
             System.out.println("There was a problem accessing the intermediate file.");
             e.printStackTrace();
         } catch (IndexOutOfBoundsException e) {
-            System.out.println("Index does not match expectation. Possible malformed HMP file.");
+            System.out.println("Index does not match expectation. Possible malformed VCF file.");
             e.printStackTrace();
         }
     }
 
     /**
-     * Interprets the HMP entry into the line buffer at the specified line.
-     * 
-     * @param lineNumber    The line number that is being parsed and indexed into partialResults[].
-     * @param entry  Is a character allele entry from an HMP file. Width is equal to ploidiness.
-     * @return  The result of the interpretation.
-     */
-    private int accumulateResults(long lineNumber, String entry) {
+    * Interprets the provided string that was read from the normalized data file
+    * and returns the csv data value. Outputs a 9 if the input file contains
+    * malformed entries.
+    * 
+    * @param entry The data entry to be converted from VCF to CSV
+    * @return   The result of the interpretation.
+    *       
+    * Note: This is best used with haploid and diploid cells. It will work with triploid
+    *       cells but the encoding results will have a 3 in the case of 3 minors...
+    */
+    private int interpretEntry(String entry) {
         if (entry == null || entry.isBlank() || entry.isEmpty()) {
             System.out.println("The provided entry contained no data.");
-            return (MISSING_DATA + 1);
+            //partialResults[lineNumber] = NO_DATA_DIPLOID_IN_CSV;
+            return MISSING_DATA;
         }
-
+        /*
+        SNP coding: for diploid,
+        If we have two major alleles, it is 0.
+        One major and one minor, it is 1.
+        Two minor alleles, it is 2.
+        */
         int result = 0;
+        int parsedValue = 0;
         // Compare allele to majorAllelesValues array to determine output:
         for (int k = 0; k < entry.length(); ++k) {
             String allele = entry.substring(k, 1 + k);
             switch (allele) {
-                case "A", "C", "G", "T",
-                     "a", "c", "g", "t",
-                     "R", "Y", "S", "W", "K", "M",
-                     "r", "y", "s", "w", "k", "m",
-                     "B", "D", "H", "V", "N",
-                     "b", "d", "h", "v", "n",
-                     ".", "-":
-                    if (!allele.equalsIgnoreCase(majorAllelesValues[(int) lineNumber])) {
-                        ++result;
-                    }
+                case "/", "|":
+                    // Do nothing, skip.
+                    break;
+                case ".", "-", "*":
+                    result = MISSING_DATA; // 5.
                     break;
                 default:
-                    if (result == MISSING_DATA) { // if the first allele was missing, set it to 5 by adding 1.
-                        ++result;
-                    } else { // else, if just the second allele is missing(regardless of it being major/minor) set it to 4.
-                        result = MISSING_DATA; // So if output in file is 4 or 5 then it is unknown or missing data.
+                if (result != BAD_DATA) {
+                    try {
+                        parsedValue = Integer.parseInt(allele);
+                        if (parsedValue > 0) {
+                            ++result;
+                        }
+                    } catch (NumberFormatException e) {
+                        result = BAD_DATA;
+                        // break; // Don't continue checking the rest of the entry.
                     }
-                    break;
+                }
+                break;
             }
         }
+        // Save result to linebuffer:
+        //partialResults[lineNumber] = result;
         return result;
+    }
+
+    /**
+    * Interprets the provided string that was read from the normalized data file
+    * and stores the results in the line buffer, partialResults.
+    * 
+    * @param lineNumber    The line number that is being parsed.
+    * @param entry The data entry to be converted from VCF to CSV
+    * Note: Does not cover the case of a single missing value in diploid cells
+    *       Example: "./#" or "#/." etc.
+    *       
+    *       If the entry is a bad length then the output will be 5/missing data.
+    */
+    @Deprecated
+    private void accumulateResults(long lineNumber, String entry) {
+        if (entry == null || entry.isBlank() || entry.isEmpty()) {
+            System.out.println("The provided entry contained no data.");
+            //partialResults[lineNumber] = NO_DATA_DIPLOID_IN_CSV;
+            //return (MISSING_DATA + 1);
+        }
+        // Check if error ./.
+        // Check if 2 zeros.
+        // Check if 1 zero
+        //   else, two minor alleles.
+        /*
+        SNP coding: for diploid,
+        If we have two major alleles, it is 0.
+        One major and one minor, it is 1.
+        Two minor alleles, it is 2.
+        */
+        int result = MISSING_DATA;
+        switch (entry) {
+            case "0/0", "0|0": // 2 Majors.
+            result = 0;
+            break;
+            case "./.", ".|.", "*/*", "*|*": // Missing data.
+            result = MISSING_DATA;
+            break;
+
+            default: // Currently only valid for diploids and assumes data entries are well-formed:
+            int value = 0;
+            if (entry.length() != VCF_DIPLOID_WIDTH) { // Simple integrity check.
+                value = MISSING_DATA;
+            } else {
+                if (!(entry.substring(0, 1).equals("0"))) { // Check first allele.
+                    ++value;
+                }
+                if (!(entry.substring(2, 3).equals("0"))) { // Check second allele.
+                    ++value;
+                }
+            }
+            result = value;
+            break;
+        }
+        //partialResults[lineNumber] = result;
+        //return result;
     }
 
     /**

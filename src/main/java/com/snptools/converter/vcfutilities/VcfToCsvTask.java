@@ -44,6 +44,7 @@ public class VcfToCsvTask implements Runnable {
      * @param totalColumns  The number of columns this worker should process.
      * @param totalLines    The total number of data lines to process.
      */
+    @Deprecated
     public VcfToCsvTask(String inputFilename, String outputFilename, int startColumn, int endColumn, int totalColumns, int totalLines) {
         this.inputFilename = inputFilename;
         this.outputFilename = outputFilename;
@@ -54,6 +55,7 @@ public class VcfToCsvTask implements Runnable {
         this.partialResults = new int[totalLines];
     }
 
+    @Override
     public void run() {
         try (
             RandomAccessFile randomAccessFile = new RandomAccessFile(inputFilename, "r");
@@ -116,8 +118,8 @@ public class VcfToCsvTask implements Runnable {
            partialResults[lineNumber] = NO_DATA_DIPLOID_IN_CSV;
            return;
        }
+       // Check if 2 zeros.
         // Check if error ./.
-        // Check if 2 zeros.
         // Check if 1 zero
         //   else, two minor alleles.
         /*

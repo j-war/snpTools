@@ -17,9 +17,18 @@ The general flow of conversion works as follows:
 * merge results
 * cleanup temporary files
 
+<b>Always check the terminal for warnings before using results.</b>
+
+Always make sure the output is a rectangular matrix. You may need to use a variety of unix commands to verify this on large files.
+
 ***
 # Requirements:
-* Quad-core CPU, 8gb RAM, ssd
+
+* macOS or Unix
+
+* Quad-core CPU, 8gb RAM minimum, ssd
+
+* 3-4 times the input file's size in free disk available
 
 * Java 16.0.2
 
@@ -29,31 +38,46 @@ The general flow of conversion works as follows:
 
 ***
 # Compilation and running:
-File names as input arguments should be relative and have file extensions and should be in the `InputFolder`. You should also create a folder named `OutputFolder` beside it before running. All from the Converter root directory:
+A simple maven build+test and run script is provided for convenience as well as basic build and run scripts.
+The maven script assumes you have mvn properly installed and both assume you have java installed as well.
+All scripts should be run from the root directory: `snpTools/`. 
 
-## Compiling:
+Only run `build.sh` script once. If you need to run it again, delete the contents of `snpTools/build/` first.
+
+You can call the run script multiple times but beware that the program <b>WILL</b> overwrite and/or delete files in `snpTools/OutputFolder/` without warning.
+
+Make sure there is an empty `snpTools/build/` folder created before using the `build.sh` script.
+
+File names as input arguments should be relative and have file extensions and should be in the `snpTools/InputFolder/`. You should also create a folder named `snpTools/OutputFolder/` beside it before running.
+
+
+## Compiling with Maven:
+From `snpTools/`.
 ```
 mvn package
 ```
 or:
 ```
-javac -d [Destination directory relative to current directory] Main.java
+zsh ./mvnbuildtest.sh
 ```
 
-Examples:
+## Compiling without Maven:
+From `snpTools/` - clear `build/` if you need to run this again.
+
 ```
-javac -d ./Converter DataInput.java
-javac -d Converter DataInput.java
+zsh ./build.sh
 ```
 
-## Running:
+## Running with Maven:
 ```
-java -cp target/converter-1.0.jar com.snptools.converter.DataInput [mode] [./InputFolder/biodata.hmp] [./OutputFolder/biodataOut.vcf]
+zsh ./mvnrun.sh 1 ./InputFolder/biodata.hmp ./OutputFolder/biodataOut.vcf
 ```
-or:
+
+## Running without Maven:
 ```
-java -cp [Classpath directory] Main [mode] [Relative input filepath with an extension] [Relative output filepath with an extension]
+zsh ./run.sh 1 ./InputFolder/biodata.hmp ./OutputFolder/biodataOut.vcf
 ```
+
 Supported modes are shown below:
 |Mode value|Result|
 |------|------|
@@ -71,45 +95,28 @@ java -cp Converter DataInput 0 InputFolder/mdp_genotype.plk OutputFolder/OutputP
 ```
 
 
-## Compiling and running:
-Examples:
+
+Folder structure:
 ```
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 0 ./InputFolder/mdp_genotype.plk ./OutputFolder/OutputPed
-
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 1 ./InputFolder/mdp_genotype ./OutputFolder/OutputVcf
-
-javac -d ./Converter DataInput.java && java -cp ./Converter DataInput 2 ./InputFolder/mdp_genotype ./OutputFolder/OutputHmp
-```
-
-Or:
-```
-javac -d Converter DataInput.java && java -cp Converter DataInput 0 InputFolder/mdp_genotype.plk OutputFolder/OutputPed
-
-javac -d Converter DataInput.java && java -cp Converter DataInput 1 InputFolder/mdp_genotype OutputFolder/OutputVcf
-
-javac -d Converter DataInput.java && java -cp Converter DataInput 2 InputFolder/mdp_genotype OutputFolder/OutputHmp
-```
-
-
-Folders:
-```
-java -cp Converter DataInput
-
 ~/snpTools/
     |
     pom.xml
+    mvnbuildtest.sh
+    mvnrun.sh
+    build.sh
+    run.sh
     README.MD
     InputFolder/ ...
     OutputFolder/ ...
     target/ ...
     Docs/ ...
-    src/test/ ...
+    src/test/ ... (Similar to src/main/)
     src/main/
         |
         resources/ ...
         java/com/snptools/converter/
                               |
-                              DataInput.java (main entry)
+                              DataInput.java (Main entry)
                               |
                               fileutilities/
                               |       |
@@ -136,7 +143,7 @@ java -cp Converter DataInput
 
 ```
 
-Input files are expected to reside in the folder named `InputFolder` that appears beside the `Converter` folder. The output results will appear in the folder `OutputFolder` that is beside `Converter` as well.
+Input files are expected to reside in the folder named `snpTools/InputFolder/`. The output results will appear in the folder `snpTools/OutputFolder/`. Both should be created before running the program.
 
 # Details on Modes:
 ## PED to CSV Conversion:
@@ -204,8 +211,9 @@ Records in VCF files contain a list of SNPs where the first entry is the major a
 <b>Note:</b> The seperator can be '/' or '\|' for phased or unphased data.
 The output rules are similar to the PED to CSV conversion with the exception that only diploid cells are supported and any missing data recieves an output of 5 versus 4 or 5 in the former.
 
+Also note that when going from VCF to CSV that the VCF format specifies '.' as 'missing' data and will appear as a 4 or 5 in the resulting CSV file.
 
-
+Contrasting with HMP to CSV, that the HMP format may use 'N' where VCF used '.'. This resulting CSV will have a 0, 1, or 2 instead. Even though the original data source was the same, the file format type passed to this program matters.
 
 
 
@@ -217,7 +225,8 @@ The HMP to CSV conversion is more involved than the previous modes. The HMP is c
 
 The two stage conversion will proceed as follows:
 * Stage 1 will consist of a summation strategy similar to step 1 of the PED conversion.
-* Stage 2 will consist of a comparison strategy similar to step 2 of the VCF conversion.
+* Stage 2 will consist of a comparison strategy similar to step 2 of the VCF to CSV conversion.
+* Stage 3 merges the chunks line by line after the transpose has been completed.
 
 ### A normalized .hmp file (with file and line headers removed):
 ![hmpfile](Docs/Hmp.png)
@@ -298,14 +307,36 @@ The data entries will only include genotype data when using this mode.
 
 
 ***
-## Troubleshooting:
+## Troubleshooting and warnings:
 
 Check the console output log for additional information.
+
+### Permision errors:
+#### Option 1 - enable execute permissions on the script:
+```
+chmod u+x mvnbuildtest.sh
+```
+#### Option 2 - get another shell to run it:
+```
+zsh ./mvnbuildtest.sh
+```
 
 This program assumes the input files are well-formed, however some formatting errors are recoverable. In cases where the data can be skipped a default "no data" entry will be substituted instead and you will receive a message in the console.
 
 However, if the expected file constraints, such as line length being inconsistent, then the program may attempt to exit.
 
-<b>Caveat:</b> Some malformed files may still have an output file generated - please check the console before using the output results.
+<u><b>Caveat:</b></u> Some malformed files may still have an output file generated - please check the console before using the output results.
+
+Make sure the output is a rectangular matric - jaggedness likely means there was an undetected error in the input. It may have invalid character data or encoding.
+
+Results may continue to be generated even from 'bad' input.
+
+Silent failures may occur if you have certain security managers set or there are permission problems. Please make sure you have read/write/execute on all of the folders and files.
+
+The program will need 3-4 times the input file's size available for staging. For example: if your input file is 7gb then up to 28gb will be required. The program will attempt to delete the temporary files and folders if the program successfully completes.
+
+If the temporary files remain then the final result may be incomplete due to lack of disk space.
+
+Partial results may be used if you're careful and understand how this program works while checking the output log. Except in the case of a "java.lang.OutOfMemoryError: Java heap space" exception leading to missing file exceptions. The state cannot be guaranteed and results should be discarded and chunkSize in HmpToCsvTaskLarge/VcfToCsvTaskLarge decreased.
 
 ***

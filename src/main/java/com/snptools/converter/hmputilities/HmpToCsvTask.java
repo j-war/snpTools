@@ -60,6 +60,7 @@ public class HmpToCsvTask implements Runnable {
         this.partialResults = new int[totalLines];
     }
 
+    @Override
     public void run() {
         try (
             RandomAccessFile randomAccessFile = new RandomAccessFile(inputFilename, "r");
@@ -68,12 +69,6 @@ public class HmpToCsvTask implements Runnable {
         ) {
             for (long i = startColumn; i < endColumn; ++i) {
                 for (long j = 0; j < totalLines; ++j) {
-                    //worker 0:
-                    // final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
-                    // 44429 * 44429 * (1 + 1) + 44429 * (1 + 1) = 3,947,960,940 / 2,147,483,647 347,006,356
-                    //worker 3:
-                    // final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
-                    //
                     final long position = (j * totalColumns * (ploidWidth + 1L)) + i * (ploidWidth + 1L);
                     if (position <= 0L) {
                         System.out.println("position:[" + position + "]");

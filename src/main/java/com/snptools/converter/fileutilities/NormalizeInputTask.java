@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.nio.channels.FileLock;
 import java.util.Scanner;
 
 /**
@@ -47,24 +48,30 @@ public class NormalizeInputTask implements Runnable {
         this.partialResults = new String[numberOfColumns];
     }
 
+    @Override
     public void run() {
         try (
             BufferedReader reader = new BufferedReader(new FileReader(inputFilenameWithExt));
             FileOutputStream outputStream = new FileOutputStream(outputFilenameWithExt);
             OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream)
         ) {
-            for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting point.
-            for (int i = 0; i < endLine - startLine; ++i) {
-                accumulateResults(reader.readLine());
-                // Write the accumulated results:
-                for (int x = 0; x < numberOfColumns; ++x) {
-                    if (x < numberOfColumns - 1) {
-                        outputStreamWriter.write(partialResults[x] + ",");
-                    } else {
-                        outputStreamWriter.write("" + partialResults[x]);
+            FileLock lock = outputStream.getChannel().tryLock();
+
+            if (lock != null) {
+                for (int i = 0; i < startLine; ++i) { reader.readLine(); } // Skip ahead to starting point.
+                for (int i = 0; i < endLine - startLine; ++i) {
+                    accumulateResults(reader.readLine());
+                    // Write the accumulated results:
+                    for (int x = 0; x < numberOfColumns; ++x) {
+                        if (x < numberOfColumns - 1) {
+                            outputStreamWriter.write(partialResults[x] + ",");
+                        } else {
+                            outputStreamWriter.write("" + partialResults[x]);
+                        }
                     }
+                    outputStreamWriter.write("\n");
                 }
-                outputStreamWriter.write("\n");
+                lock.release();
             }
         } catch (FileNotFoundException e) {
             System.out.println("A normalization worker could not find the provided file.");

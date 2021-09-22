@@ -1,36 +1,36 @@
 package com.snptools.converter.hmputilities;
 
-import com.snptools.converter.fileutilities.FileController;
-import com.snptools.converter.fileutilities.NormalizeInputTask;
-
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.Scanner;
+import java.util.TreeMap;
+
+import com.snptools.converter.fileutilities.DiskFullException;
+import com.snptools.converter.fileutilities.FileController;
+import com.snptools.converter.fileutilities.NormalizeInputTask;
 
 /**
  * The HmpController class directs the conversion of an .hmp text file into a .csv output file
  * or an .hmp text file into a .vcf output file.
  * @author  Jeff Warner
- * @version 1.1, July 2021
+ * @version 1.3, September 2021
  */
 public class HmpController {
 
     private volatile String hmpFileName = "./input.hmp"; // The input file name with path and extension.
     private volatile String outputFileName = "./output.csv"; // The output file name with path and extension.
-    private final String TEMP_FILE_NAME = "TEMP"; // File name appendix for stage 1.
+    private final String TEMP_FILE_NAME = "TEMP"; // File name appendix for stage 1 - normalized.
     private final String TEMP_FILE_NAME_2ND = "TEMP_2ND"; // File name appendix for stage 2.
     private final int NUMBER_OF_WORKERS = 4; // The number of worker threads to create.
     private final int NUMBER_OF_BASES = 16 + 1; // Number of bases, or combination of bases, to create a sum for, including +1 for unknown values.
-    //private int EXPECTED_COLUMN_WIDTH_HMP = 1; // Column width: the number of chars in an entry
     private int hmpPloidiness = 0; // The number of characters in the HMP file's data entries.
 
     private int totalInputLines = 0; // The total number of lines in the file including the header.
@@ -64,6 +64,79 @@ public class HmpController {
     }
 
     public void startHmpToCsv() {
+        if (!prepareInputData()) {
+            return; // Failed to prepare data or get file constraints.
+        }
+
+        makeMajorAllelesDataStructures();
+        convertHmpToCsv();
+    }
+
+    private void convertHmpToCsv() {
+        if (totalInputLines >= 2500 || totalInputColumns >= 250) { // Arbitrary values.
+            System.out.println("\nLarge input file detected.\n");
+        }
+        convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS);
+        try {
+            FileController.mergeFilesLines(
+                totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
+                NUMBER_OF_WORKERS,
+                outputFileName,
+                outputFileName + TEMP_FILE_NAME_2ND
+            );
+            cleanUpAll(); // Attempt to delete temporary files and folders.
+        } catch (DiskFullException e) {
+            System.out.println("Error: The disk appears to be full. However, partial results are available.");
+            System.out.println("Use with caution.");
+            System.out.println("Partial results available at:");
+            for (int x = 0; x < NUMBER_OF_WORKERS; ++x) {
+                System.out.println("File " + (x + 1) + ": [" + outputFileName + TEMP_FILE_NAME_2ND + x + "]");
+            }
+        }
+    }
+
+    public void startHmpToVcf() {
+        if (!prepareInputData()) {
+            return; // Failed to prepare data or get file constraints.
+        }
+
+        String intermediateFile = outputFileName + TEMP_FILE_NAME;
+        try {
+            mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
+        } catch (DiskFullException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Results are invalid.\n");
+            e.printStackTrace();
+        }
+
+        makeMajorAllelesDataStructures();
+
+        // Create headers, exit if unable to do so.
+        if (!makeVcfHeaders()) {
+            System.out.println("Failed to collect data.");
+            return;
+        }
+
+        convertHmpToVcf();
+    }
+
+    private void convertHmpToVcf() {
+        convertHmpToVcfThreaded(NUMBER_OF_WORKERS); // Write output.
+        try {
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
+            cleanUpAll(); // Attempt to delete temporary files.
+        } catch (DiskFullException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but may not be valid.\n");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Collects file constraints and normalizes the data for further processing.
+     * @return  Whether the file constraints were consistent
+     */
+    private boolean prepareInputData() {
         totalInputLines = FileController.countTotalLines(hmpFileName);
         totalInputColumns = countLineLength();
 
@@ -71,21 +144,24 @@ public class HmpController {
         // Simple integrity check:
         if (totalInputLines <= 0 || totalInputColumns <= 0) {
             System.out.println("\nThe file header is missing or the file is empty. Please make sure the hmp file is valid.\n");
-            return;
+            return false;
         }
 
         hmpPloidiness = determinePloidiness();
         // Simple integrity check:
         if (hmpPloidiness <= 0) {
             System.out.println("\nThe ploidiness of the file could not be determined. Please make sure the hmp file is valid.\n");
-            return;
+            return false;
         }
 
         normalizeInputThreaded(NUMBER_OF_WORKERS);
+        return true;
+    }
 
-        //String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        //mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME); // Merge the files into a single temp file.
-
+    /**
+     * Creates and populates the majorAlleles data structures.
+     */
+    private void makeMajorAllelesDataStructures() {
         processInputThreaded(NUMBER_OF_WORKERS); // Sum frequencies.
 
         // Determine and set major alleles:
@@ -93,32 +169,14 @@ public class HmpController {
         mergeThreadTotals();
         calculateMajors();
         //printIntermediateData();
-
-        // If the file is "large", use the 'large' method:
-        if (totalInputLines >= 2500 || totalInputColumns >= 250) {
-            System.out.println("Large input file detected.\n");
-            convertHmpToCsvLargeThreaded(NUMBER_OF_WORKERS); // Writes into a single output file.
-            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
-        } else { // Else, the file is "small", use the default method:
-            convertHmpToCsvThreaded(NUMBER_OF_WORKERS); // Writes a series of output files that should be merged sequentially.
-            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-        }
-//cleanupall?
-        //cleanUp(); // Attempt to delete temporary files.
-
     }
 
-    public void startHmpToVcf() {
-        totalInputLines = FileController.countTotalLines(hmpFileName);
-        totalInputColumns = countLineLength();
-
-        printDebugLineInfo();
-        // Simple integrity check:
-        if (totalInputLines <= 0 || totalInputColumns <= 0) {
-            System.out.println("\nThe file header is missing or the file is empty. Please make sure the hmp file is valid.\n");
-            return;
-        }
-
+    /**
+     * Organizing method that creates the output vcf headers.
+     * @return  True if the headers were created, false is there are
+     *          any errors.
+     */
+    private boolean makeVcfHeaders() {
         // Collect the input file line headers:
         initLineHeaders();
         collectLineHeaders();
@@ -127,35 +185,16 @@ public class HmpController {
         // Simple integrity check: Check if ids were collected, otherwise return
         if (sampleIds == null || (sampleIds.length != (totalInputColumns - NUMBER_OF_HEADER_COLUMNS))) {
             System.out.println("\nSample ids could not be detected. Please make sure the hmp file is well formed and that the number of records matches the number of ids.\n");
-            return;
-        }
-
-        hmpPloidiness = determinePloidiness();
-        // Simple integrity check:
-        if (hmpPloidiness <= 0) {
-            System.out.println("\nThe ploidiness of the file could not be determined. Please make sure the hmp file is valid.\n");
-            return;
+            return false;
         }
 
         collectStrandDirections();
         //printStrandDirections();
         // Simple integrity check: Check if strands were collected, otherwise return
         if (strandDirections == null || (strandDirections.length != (totalInputLines - NUMBER_OF_HEADER_LINES))) {
-            System.out.println("\nStrand directions could not be collected. Please make sure the hmp file is well formed.\n");
-            return;
+            System.out.println("\nStrand directions could not be collected. Please make sure the HMP file is well formed.\n");
+            return false;
         }
-
-        normalizeInputThreaded(NUMBER_OF_WORKERS);
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME); // Merge the files into a single temp file.
-
-        processInputThreaded(NUMBER_OF_WORKERS); // Sum frequencies.
-
-        // Determine and set major alleles:
-        initTotals();
-        mergeThreadTotals();
-        calculateMajors();
-        //printIntermediateData();
 
         // Collect all of the alleles into a single ds in order to construct a proper line header as well as to
         // provide translation of bases->integers for the hmp->vcf conversion process.
@@ -164,10 +203,12 @@ public class HmpController {
 
         createOutputLineHeaders();
         //printOutputLineHeaders();
+        if (allAllelesValues == null || outputLineHeaders == null || (outputLineHeaders.length != (totalInputLines - NUMBER_OF_HEADER_LINES))) {
+            System.out.println("\nVCF output headers could not be created. Please make sure the HMP file is well formed.\n");
+            return false;
+        }
 
-        convertHmpToVcfThreaded(NUMBER_OF_WORKERS); // Write output.
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND); // Writes the final output.
-        cleanUpAll(); // Attempt to delete temporary files.
+        return true;
     }
 
     /**
@@ -363,7 +404,7 @@ public class HmpController {
      * Work is distributed evenly amongst worker threads.
      * <p>
      * 
-     * @param workers
+     * @param workers   The number of threads and the number of resulting files.
      * 
      * Note: Further explanations can be found in the NormalizeInputTask.java file.
      */
@@ -374,16 +415,6 @@ public class HmpController {
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-                System.out.println("Controller report:");
-                System.out.println("NormalizeWorker[" + (i) + "]");
-                System.out.println("hmpFileName[" + (hmpFileName) + "]");
-                System.out.println("outputFileName[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
-                System.out.println("startLine[" + ((i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers) + NUMBER_OF_HEADER_LINES) + "]");
-                System.out.println("endLine[" + (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers) + NUMBER_OF_HEADER_LINES) + "]");
-                System.out.println("startColumn[" + (NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("numberOfColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("columnWidth[" + (hmpPloidiness) + "]");
-                System.out.println("End controller report.\n");
                 normalizePool[i] = new NormalizeInputTask(
                     hmpFileName,
                     outputFileName + TEMP_FILE_NAME + i,
@@ -421,20 +452,12 @@ public class HmpController {
             // Create task and add it to both pools and then start it immediately.
             // Split work evenly, give threads start and end lines
             for (int i = 0; i < workers; ++i) {
-                System.out.println("Controller report:");
-                System.out.println("HmpSumTask[" + (i) + "]");
-                System.out.println("inputFileName[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
-                System.out.println("startLine[" + ((i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers)) + "]");
-                System.out.println("endLine[" + ((((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers)) + "]");
-                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("End controller report.\n");
-                // (i * lines / arg), (((1 + i) * lines) / arg)
                 sumPool[i] = new HmpSumTask(
                     outputFileName + TEMP_FILE_NAME + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers),
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers),
                     (totalInputColumns - NUMBER_OF_HEADER_COLUMNS),
-                    true
+                    true // Scan the whole file.
                 );
                 threadPool[i] = new Thread(sumPool[i]);
                 threadPool[i].start();
@@ -467,13 +490,6 @@ public class HmpController {
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-                // Input file
-                // Output file
-                // Line to start
-                // End line
-                // How many columns
-                // Alleles[]
-
                 resultsPool[i] = new HmpToVcfTask(
                     outputFileName + TEMP_FILE_NAME,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
@@ -660,28 +676,14 @@ public class HmpController {
      * 
      * @param workers   The number of workers for this task. Simply the number of threads to create.
      */
+    @Deprecated
     private void convertHmpToCsvThreaded(int workers) {
         if (workers > 0) {
             resultsPool = new HmpToCsvTask[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-
-                System.out.println("Controller report:");
-                System.out.println("HmpToCsvTask[" + (i) + "]");
-                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME) + "]");
-                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
-                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("majorAllelesValues[array]");
-                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
-                System.out.println("End controller report.\n");
-
-
-                // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTask(
-                    outputFileName + TEMP_FILE_NAME,
+                    outputFileName + TEMP_FILE_NAME + i,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
                     ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
@@ -704,37 +706,29 @@ public class HmpController {
         }
     }
 
+    /**
+     * Creates a pool of workers and distributes the work evenly to calculate the results.
+     * 
+     * Steps: Create a task and add it to both pools and then start it immediately.
+     *        Split work evenly by giving tasks start and end lines
+     * <p>
+     * Results are written to a .csv text file at the set file location. The result files are meant to be merged sequentially
+     * after all threads have completed.
+     * 
+     * @param workers   The number of workers for this task. Simply the number of threads to create.
+     */
     private void convertHmpToCsvLargeThreaded(int workers) {
         if (workers > 0) {
             resultsPool = new HmpToCsvTaskLarge[workers];
             Thread[] threadPool = new Thread[workers];
             for (int i = 0; i < workers; ++i) {
-
-                System.out.println("Controller report:");
-                System.out.println("HmpToCsvTaskLarge[" + (i) + "]");
-                System.out.println("inputFilename[" + (outputFileName + TEMP_FILE_NAME + i) + "]");
-                System.out.println("outputFilename[" + (outputFileName + TEMP_FILE_NAME_2ND + i) + "]");
-                System.out.println("startColumn[" + ((i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("endColumn[" + (((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers)) + "]");
-                System.out.println("totalColumns[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("totalLines[" + (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) + "]");
-                System.out.println("majorAllelesValues[array]");
-                System.out.println("ploidiness[" + (hmpPloidiness) + "]");
-                System.out.println("End controller report.\n");
-
-
-                // (i * lines / arg), (((1 + i) * lines) / arg)
                 resultsPool[i] = new HmpToCsvTaskLarge(
                     outputFileName + TEMP_FILE_NAME + i,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
                     (i * (totalInputLines - NUMBER_OF_HEADER_LINES) / workers), // start line
                     (((1 + i) * (totalInputLines - NUMBER_OF_HEADER_LINES)) / workers), // end line
-                    (i * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
-                    ((1 + i) * (totalInputColumns - NUMBER_OF_HEADER_COLUMNS) / workers),
-                    totalInputColumns - NUMBER_OF_HEADER_COLUMNS,
-                    totalInputLines - NUMBER_OF_HEADER_LINES,
-                    majorAllelesValues,
-                    hmpPloidiness
+                    majorAllelesValues, // majorAlleles
+                    i // the portion of the total data it will work on.
                 );
                 threadPool[i] = new Thread(resultsPool[i]);
                 threadPool[i].start();
@@ -745,6 +739,21 @@ public class HmpController {
                 } catch (InterruptedException e) {
                     System.out.println("Error joining results worker [" + i + "].");
                     e.printStackTrace();
+                }
+            }
+
+            // Check that the workers completed tasks and merge their results:
+            for (int i = 0; i < workers; ++i) {
+                int pieces = ((HmpToCsvTaskLarge)resultsPool[i]).getNumberOfFilesInSeries();
+                try {
+                    FileController.mergeFilePieces(
+                        (totalInputColumns - NUMBER_OF_HEADER_COLUMNS),
+                        pieces, // Number of files in the series.
+                        outputFileName + TEMP_FILE_NAME_2ND, // result file
+                        i // the portion/worker number
+                    );
+                } catch (DiskFullException e) {
+                    System.out.println("Error: The disk appears to be full. However, partial results are available.");
                 }
             }
         }
@@ -779,9 +788,9 @@ public class HmpController {
         outputLineHeaders[0] = version + "\n" + format + "\n" + columnHeaders;
 
         for (int i = 0; i < sampleIds.length; ++i) {
-            outputLineHeaders[0] += ("" + '\t' + sampleIds[i]);
+            outputLineHeaders[0] += ("" + "\t" + sampleIds[i]);
         }
-        outputLineHeaders[0] += ("" + '\n');
+        outputLineHeaders[0] += ("" + "\n");
         // Done making the file header.
         // Add the line header to each entry outputLineHeaders:
         for (int i = 0; i < outputLineHeaders.length; ++i) {
@@ -798,7 +807,7 @@ public class HmpController {
                 result = "" + allAlleles + "\t.\t";
             } else {
                 String[] values = allAlleles.split(",");
-                result = "" + values[0] + '\t'; 
+                result = "" + values[0] + "\t"; 
                 for (int j = 1; j < values.length; ++j) {
                     if (j == values.length - 1) {
                         result += ("" + values[j]);
@@ -816,9 +825,9 @@ public class HmpController {
             // VCF:
             //#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	...
                 += (""
-                + getLineHeaders().get(i)[2] + '\t' // #CHOM
-                + getLineHeaders().get(i)[3] + '\t' // POS
-                + getLineHeaders().get(i)[0] + '\t' // ID
+                + getLineHeaders().get(i)[2] + "\t" // #CHOM
+                + getLineHeaders().get(i)[3] + "\t" // POS
+                + getLineHeaders().get(i)[0] + "\t" // ID
                 + result // REF + ALT
                 + ".\t" // QUAL -> .
                 + "NA\t" // FILTER -> NA/PASS
@@ -833,22 +842,12 @@ public class HmpController {
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and with an extension.
      * @param tempName  The intermediate file containing its appendix, file path, and an extension.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
      */
-    private void mergeFiles(int count, String resultFile, String tempName) {
-        FileController.mergeFiles(count, resultFile, tempName);
-    }
-
-    /**
-     * Attempts to clean up a set of temporary files.
-     * 
-     *  Note: May silently fail to delete temporary files if there are certain security settings on the system.
-     *        Will delete and/or overwrite existing data with no warning or prompts.
-     */
-    private void cleanUp() {
-        FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME); // Delete stage 1 files.
-        FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+    private void mergeFiles(int fileCount, String resultFile, String tempName) throws DiskFullException {
+        FileController.mergeFiles(fileCount, resultFile, tempName);
     }
 
     /**
@@ -859,8 +858,11 @@ public class HmpController {
      */
     private void cleanUpAll() {
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME); // Delete stage 1 files.
-        FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        if (FileController.canReadFile(outputFileName + TEMP_FILE_NAME)) {
+            FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        }
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME_2ND); // Delete stage 2 files.
+        FileController.deleteTempFolders(NUMBER_OF_WORKERS, outputFileName);
     }
 
     // Debug helper:
@@ -931,6 +933,24 @@ public class HmpController {
         for (int i = 0; i < outputLineHeaders.length; ++i) { //outputLineHeaders.length
             System.out.println("[" + i + "]: [" + outputLineHeaders[i] + "]");
         }
+    }
+
+    /**
+     * Returns the input file path with an extension.
+     *
+     * @return  The input file name and path with an extension.
+     */
+    public String getInputFilePath() {
+        return hmpFileName;
+    }
+
+    /**
+     * Returns the output file path with an extension.
+     *
+     * @return  The output file name and path with an extension.
+     */
+    public String getOutputFilePath() {
+        return outputFileName;
     }
 
 }

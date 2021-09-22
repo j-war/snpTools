@@ -1,5 +1,6 @@
 package com.snptools.converter.vcfutilities;
 
+import com.snptools.converter.fileutilities.DiskFullException;
 import com.snptools.converter.fileutilities.FileController;
 import com.snptools.converter.fileutilities.NormalizeInputTask;
 
@@ -15,7 +16,7 @@ import java.util.Scanner;
 /**
  * The VcfController class directs the conversion of a .vcf text file into a .csv or .hmp output file.
  * @author  Jeff Warner
- * @version 1.1, June 2021
+ * @version 1.2, September 2021
  */
 public class VcfController {
 
@@ -27,6 +28,8 @@ public class VcfController {
 
     final int MAJOR_REF_ALLELE_POSITION = 3; // The position of the major allele.
     final int ALT_ALLELE_POSITION = 4; // The position of a comma seperated String of all SNPs for this site.
+
+    private int vcfPloidinessWidth = 0; // The number of characters in the VCF file's data entries - INCLUDING seperators.
 
     private int totalInputLines = 0; // The number of lines in the file, # of samples = totalInputLines - numberOfHeaderLines.
     private int numberOfHeaderLines = 0; // The size of the file header.
@@ -52,9 +55,9 @@ public class VcfController {
     }
 
     public void startVcfToCsv() {
-        totalInputLines = FileController.countTotalLines(vcfFileName); // 125ms. 800ms on 300mb, [1.3gb: 3900-5500ms on 150 lines, 8.5million character line, 4.27m columns].
+        totalInputLines = FileController.countTotalLines(vcfFileName);
         numberOfHeaderLines = countHeaderLines();
-        inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
+        inputColumnCount = countLineLength();
 
         // Simple integrity check:
         if (totalInputLines <= 0 || numberOfHeaderLines <= 0 || inputColumnCount <= 0) {
@@ -65,7 +68,13 @@ public class VcfController {
             System.out.println("\nThe header column count appears in valid. Please make sure the vcf file is valid.\n");
             return;
         }
-        // determinePloidiness() // NYI.
+
+        vcfPloidinessWidth = determinePloidiness();
+        // Simple integrity check:
+        if (vcfPloidinessWidth <= 0) {
+            System.out.println("\nThe ploidiness of the file could not be determined. Please make sure the hmp file is valid.\n");
+            return;
+        }
 
         printDebugLineInfo();
         // Simple integrity check:
@@ -75,22 +84,31 @@ public class VcfController {
         }
 
         normalizeInputThreaded(NUMBER_OF_WORKERS); // Strip and normalize genotype data out and into an intermediate file.
+        convertVcfToCsv();
+    }
 
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
-        // total: 800-900ms for 3.5mb
-
-        processInputThreaded(NUMBER_OF_WORKERS); // Process the prepared files to their results.
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
-
-        cleanUpAll();
+    private void convertVcfToCsv() {
+        convertVcfToCsvThreaded(NUMBER_OF_WORKERS);
+        try {
+            //mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
+            FileController.mergeFilesLines(
+                inputColumnCount - numberOfHeaderColumns,
+                NUMBER_OF_WORKERS,
+                outputFileName,
+                outputFileName + TEMP_FILE_NAME_2ND
+            );
+            cleanUpAll(); // Attempt to delete temporary files and folders.
+        } catch (DiskFullException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            e.printStackTrace();
+        }
     }
 
     public void startVcfToHmp() {
-        totalInputLines = FileController.countTotalLines(vcfFileName); // 125ms. 800ms on 300mb, [1.3gb: 3900-5500ms on 150 lines, 8.5million character line, 4.27m columns].
+        totalInputLines = FileController.countTotalLines(vcfFileName);
         numberOfHeaderLines = countHeaderLines();
-        inputColumnCount = countLineLength(); // 70ms. [1.3gb: ~1500 on 150 lines, 8.5million character line, 4.27m columns]
-
+        inputColumnCount = countLineLength();
         // determinePloidiness() // NYI.
 
         printDebugLineInfo();
@@ -115,15 +133,20 @@ public class VcfController {
         createOutputLineHeaders();
 
         normalizeInputThreaded(NUMBER_OF_WORKERS); // Strip and normalize genotype data out and into an intermediate file.
-
-        String intermediateFile = outputFileName + TEMP_FILE_NAME;
-        mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
-        // total: 800-900ms for 3.5mb
-
-        convertVcfToHmpThreaded(NUMBER_OF_WORKERS);
-        mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
-
-        cleanUpAll();
+        try {
+            String intermediateFile = outputFileName + TEMP_FILE_NAME;
+            mergeFiles(NUMBER_OF_WORKERS, intermediateFile, outputFileName + TEMP_FILE_NAME);
+            // total: 800-900ms for 3.5mb
+    
+            convertVcfToHmpThreaded(NUMBER_OF_WORKERS);
+            mergeFiles(NUMBER_OF_WORKERS, outputFileName, outputFileName + TEMP_FILE_NAME_2ND);
+    
+            cleanUpAll();
+        } catch (DiskFullException e) {
+            System.out.println("Error: An IOException occurred - the disk may be full.");
+            System.out.println("\nWarning: Partial results are available but not may not be valid.\n");
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -172,7 +195,7 @@ public class VcfController {
             return 0;
         }
     }
-    
+
     /**
      * Counts the number of columns present in the vcf file. The number of data
      * input columns is returned while the number of header columns is set manually.
@@ -351,18 +374,6 @@ public class VcfController {
      *       and predictable output.
      */
     private void createOutputLineHeaders() {
-/* Example: file header + newline + first data entries line header
-
-outputLineHeaders[0] =
-        (column headers) + (sample ids) + (\n) = 
-        "rs#	alleles	chrom	pos	strand	assembly#	center	protLSID	assayLSID	panel	QCcode" + "ids" + "\n"
-
-outputLineHeaders[1] onwards = 
-        vcf[2] + (vcf[3] + "/" + vcf[4]) + vcf[0] + vcf[1] + "." + "." + "NA" + "NA" + "NA" + NA" + "NA" + (data here)
-
-        where (data here) is filled in in the conversion task worker.
-*/
-
         outputLineHeaders = new String[totalInputLines - numberOfHeaderLines];
         for (int i = 0; i < outputLineHeaders.length; ++i) {
             outputLineHeaders[i] = "";
@@ -426,6 +437,52 @@ outputLineHeaders[1] onwards =
     }
 
     /**
+     * Determines the level of ploidiness of the provided file by navigating to the first
+     * data entry and returning entry.length() - this also includes the sepators.
+     * Returns 0 on any error.
+     * 
+     * @return  The ploidiness of the file, simply the length of the data entry string including seperators.
+     */
+    private int determinePloidiness() {
+        try (BufferedReader reader = new BufferedReader(new FileReader(vcfFileName))) {
+            int ploidiness = 0;
+            for (int i = 0; i < numberOfHeaderLines; ++i) { reader.readLine(); } // Skip ahead.
+            String line = reader.readLine();
+            if (line != null) {
+                Scanner lineScanner = new Scanner(line);
+                for (int j = 0; j < numberOfHeaderColumns; ++j) { // Skip line header
+                    if (lineScanner.hasNext()) {
+                        lineScanner.next();
+                    } else {
+                        lineScanner.close();
+                        return 0;
+                    }
+                }
+                // Assuming there is at least one data column following the line header:
+                if (lineScanner.hasNext()) {
+                    String dataEntry =  lineScanner.next();
+                    ploidiness = dataEntry.length();
+                    lineScanner.close();
+                    return ploidiness;
+                } else {
+                    lineScanner.close();
+                    System.out.println("A data entry could not be found.");
+                    return 0;
+                }
+            } // else, the line was null.
+            return 0;
+        } catch (FileNotFoundException e) {
+            System.out.println("The input file could not be found.");
+            e.printStackTrace();
+            return 0;
+        } catch (IOException e) {
+            System.out.println("There was an IO error checking the input file.");
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    /**
      * Normalizes the data input file for uniform processing and file navigation and improved performance.
      * <p>
      * File headers and line headers are stripped according to previously determined constraints. 
@@ -444,32 +501,6 @@ outputLineHeaders[1] onwards =
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-/* Example:
-    i = 0
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 0 + numberOfHeaderLines = 11
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = (totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = (3104-11)/4 + 11 = 784.25
-
-    i = 1
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 1*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 1*(3104-11)/4 + 11 = 784.25
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 2*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 2*(3104-11)/4 + 11 = 1557.5
-
-    i = 2
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 2*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 2*(3104-11)/4 + 11 = 1557.5
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 3*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 3*(3104-11)/4 + 11 = 2330.75
-
-    i = 3
-    (i * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 3*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 3*(3104-11)/4 + 11 = 2330.75
-    ((1 + i) * (totalInputLines - numberOfHeaderLines) / workers) + numberOfHeaderLines,
-                        = 4*(totalInputLines - numberOfHeaderLines)/4 + numberOfHeaderLines = 4*(3104-11)/4 + 11 = 3104
-
-*/
                 normalizePool[i] = new NormalizeInputTask(
                     vcfFileName,
                     outputFileName + TEMP_FILE_NAME + i,
@@ -505,6 +536,7 @@ outputLineHeaders[1] onwards =
      *
      * Note: Only diploid cells are currently supported.
      */
+    @Deprecated
     private void processInputThreaded(int workers) {
         if (workers > 0) {
             resultsPool = new VcfToCsvTask[workers];
@@ -538,6 +570,58 @@ outputLineHeaders[1] onwards =
     }
 
     /**
+     * Creates a pool of workers and distributes the work evenly to calculate the results.
+     * 
+     * Steps: Create a task and add it to both pools and then start it immediately.
+     *        Split work evenly by giving tasks start and end lines
+     * <p>
+     * Results are written to a .csv text file at the set file location. The result files are meant to be merged sequentially
+     * after all threads have completed.
+     * 
+     * @param workers   The number of workers for this task. Simply the number of threads to create.
+     */
+    private void convertVcfToCsvThreaded(int workers) {
+        if (workers > 0) {
+            resultsPool = new VcfToCsvTaskLarge[workers];
+            Thread[] threadPool = new Thread[workers];
+            for (int i = 0; i < workers; ++i) {
+                resultsPool[i] = new VcfToCsvTaskLarge(
+                    outputFileName + TEMP_FILE_NAME + i,
+                    outputFileName + TEMP_FILE_NAME_2ND + i,
+                    (i * (totalInputLines - numberOfHeaderLines) / workers), // start line
+                    (((1 + i) * (totalInputLines - numberOfHeaderLines)) / workers), // end line
+                    i // the portion of the total data it will work on.
+                );
+                threadPool[i] = new Thread(resultsPool[i]);
+                threadPool[i].start();
+            }
+            for (int i = 0; i < workers; ++i) {
+                try {
+                    threadPool[i].join();
+                } catch (InterruptedException e) {
+                    System.out.println("Error joining results worker [" + i + "].");
+                    e.printStackTrace();
+                }
+            }
+
+            // Check that the workers completed tasks and merge their results:
+            for (int i = 0; i < workers; ++i) {
+                int pieces = ((VcfToCsvTaskLarge)resultsPool[i]).getNumberOfFilesInSeries();
+                try {
+                    FileController.mergeFilePieces(
+                        (inputColumnCount - numberOfHeaderColumns),
+                        pieces, // Number of files in the series.
+                        outputFileName + TEMP_FILE_NAME_2ND, // result file
+                        i // the portion/worker number
+                    );
+                } catch (DiskFullException e) {
+                    System.out.println("Error: The disk appears to be full. However, partial results are available.");
+                }
+            }
+        }
+    }
+
+    /**
      * Process the intermediate data that has been normalized.
      * Creates a pool of workers and distributes the work evenly to calculate the results.
      * <p>
@@ -555,13 +639,6 @@ outputLineHeaders[1] onwards =
             // Create task and add it to both pools and start it immediately.
             // Split work evenly:
             for (int i = 0; i < workers; ++i) {
-                // Input file
-                // Output file
-                // Line to start
-                // End line
-                // How many columns
-                // Alleles[]
-
                 resultsPool[i] = new VcfToHmpTask(
                     outputFileName + TEMP_FILE_NAME,
                     outputFileName + TEMP_FILE_NAME_2ND + i,
@@ -594,10 +671,11 @@ outputLineHeaders[1] onwards =
      * @param count The number of files in the set, from 0 to count - 1, inclusive.
      * @param resultFile    The output file name with path and with an extension.
      * @param tempName  The intermediate file containing its appendix, file path, with an extension.
+     * @throws DiskFullException  If the print writer experiences an error such as a full disk.
      * 
      * Note: Will overwrite existing data with no warning or prompts.
      */
-    private void mergeFiles(int count, String resultFile, String tempName) {
+    private void mergeFiles(int count, String resultFile, String tempName) throws DiskFullException {
         FileController.mergeFiles(count, resultFile, tempName);
     }
 
@@ -609,8 +687,11 @@ outputLineHeaders[1] onwards =
      */
     private void cleanUpAll() {
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME); // Delete stage 1 files.
-        FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        if (FileController.canReadFile(outputFileName + TEMP_FILE_NAME)) {
+            FileController.deleteSingleFile(outputFileName + TEMP_FILE_NAME); // Delete combined stage 1 result.
+        }
         FileController.cleanUp(NUMBER_OF_WORKERS, outputFileName, TEMP_FILE_NAME_2ND); // Delete stage 2 files.
+        FileController.deleteTempFolders(NUMBER_OF_WORKERS, outputFileName);
     }
 
     // Debug helper

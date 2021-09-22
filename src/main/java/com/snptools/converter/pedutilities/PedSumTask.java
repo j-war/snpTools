@@ -55,6 +55,7 @@ public class PedSumTask implements Runnable {
         }
     }
 
+    @Override
     public void run() {
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilename))) {
             initTotals();

@@ -55,6 +55,7 @@ public class PedResultsTask implements Runnable {
         this.majorAllelesValues = majorAllelesValues;
     }
 
+    @Override
     public void run() {
         try (
             BufferedReader reader = new BufferedReader(new FileReader(inputFilename));
