@@ -1,7 +1,9 @@
 #!/bin/zsh
 
-javac -cp ".:lib/*" -d build $(find ./src/main -name "*.java")
 mkdir build
+
+javac -cp ".:lib/*" -d build $(find ./src/main -name "*.java")
+
 cd build
 jar cvf DataInput.jar *
 cd ..
